@@ -11,6 +11,7 @@ lazy_static! {
     };
 }
 
+#[allow(clippy::result_large_err)]
 fn get_sync(url: String) -> Result<ureq::Response, ureq::Error> {
     UREQ_AGENT.get(&url).set("Connection", "keep-alive").call()
 }

@@ -178,7 +178,7 @@ pub fn special_search(item_id: u32, href: &String) -> Option<(String, String)> {
                         if parent.value().is_element() {
                             let element = ElementRef::wrap(parent).unwrap();
                             let link_selector = Selector::parse("a").unwrap();
-                            for a_element in element.select(&link_selector) {
+                            if let Some(a_element) = element.select(&link_selector).next() {
                                 let mut result: (String, String) = ("".to_string(), "".to_string());
                                 if let Some(href) = a_element.value().attr("href") {
                                     result.0 = href.split("#").next().unwrap_or("").to_string();
