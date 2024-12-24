@@ -12,6 +12,7 @@ use std::io::{BufReader, BufWriter};
 use std::path::PathBuf;
 
 #[derive(Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct Cache {
     pub popups: IndexMap<String, Popup>,
     pub item_names: Option<CachedData<HashMap<String, Vec<u32>>>>,
@@ -23,20 +24,12 @@ pub struct CachedData<T> {
     pub value: T,
 }
 
-impl Default for Cache {
-    fn default() -> Self {
-        Self {
-            popups: Default::default(),
-            item_names: Default::default(),
-        }
-    }
-}
 
 impl Cache {
     pub fn add_popup(&mut self, key: &String, popup: &mut Popup, refresh_date: bool) {
-        let max_popup_cache_size = Addon::lock().config.max_popup_cache_size.clone();
+        let max_popup_cache_size = Addon::lock().config.max_popup_cache_size;
         while self.popups.len() >= max_popup_cache_size {
-            if let None = self.popups.shift_remove_index(0) {
+            if self.popups.shift_remove_index(0).is_none() {
                 break;
             }
         }

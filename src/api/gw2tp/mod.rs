@@ -40,7 +40,7 @@ pub fn fetch_item_names_thread() {
                             .items
                             .into_iter()
                             .fold(HashMap::new(), |mut map, (id, name)| {
-                                map.entry(name).or_insert_with(Vec::new).push(id);
+                                map.entry(name).or_default().push(id);
                                 map
                             });
                     let cache = Some(CachedData {

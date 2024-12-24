@@ -13,10 +13,6 @@ pub fn background_thread() {
             break;
         }
         clean_finished_threads();
-        if Addon::lock().config.valid() {
-            if Addon::lock().context.valid() && game_has_focus() {}
-        }
-
         thread::sleep(Duration::from_millis(500));
     }));
 }

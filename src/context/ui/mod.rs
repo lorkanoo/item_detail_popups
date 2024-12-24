@@ -3,6 +3,7 @@ use crate::context::ui::popup::Popup;
 pub mod popup;
 
 #[derive(Clone, Debug)]
+#[derive(Default)]
 pub struct UiContext {
     pub hovered_popup: Option<Popup>,
     pub pinned_popups: Vec<Popup>,
@@ -12,12 +13,3 @@ pub struct UiContext {
 #[derive(Clone, Debug)]
 pub struct Errors {}
 
-impl Default for UiContext {
-    fn default() -> Self {
-        Self {
-            hovered_popup: None,
-            pinned_popups: vec![],
-            loading: None,
-        }
-    }
-}

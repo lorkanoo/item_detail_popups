@@ -51,19 +51,16 @@ impl Addon {
         }
         process_ui_actions_for_vec(&mut self.context.ui.pinned_popups, &mut ui_actions);
         for ui_action in &ui_actions {
-            match ui_action {
-                UiAction::Open(href, title) => {
-                    let moved_href = href.clone();
-                    let moved_title = title.clone();
-                    Addon::threads().push(thread::spawn(move || {
-                        Addon::lock().context.ui.loading = Some(1);
-                        thread::sleep(Duration::from_millis(150));
-                        Addon::lock().context.ui.hovered_popup =
-                            Some(prepare_href_popup(&moved_href, moved_title));
-                        Addon::lock().context.ui.loading = None;
-                    }));
-                }
-                _ => {}
+            if let UiAction::Open(href, title) = ui_action {
+                let moved_href = href.clone();
+                let moved_title = title.clone();
+                Addon::threads().push(thread::spawn(move || {
+                    Addon::lock().context.ui.loading = Some(1);
+                    thread::sleep(Duration::from_millis(150));
+                    Addon::lock().context.ui.hovered_popup =
+                        Some(prepare_href_popup(&moved_href, moved_title));
+                    Addon::lock().context.ui.loading = None;
+                }));
             }
         }
     }

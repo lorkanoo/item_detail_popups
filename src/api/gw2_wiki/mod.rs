@@ -44,7 +44,7 @@ pub fn prepare_item_popup(item_name: &String) -> Popup {
     popup
 }
 
-fn fill_using_special_search(item_name: &String, mut popup: &mut Popup) -> Option<Popup> {
+fn fill_using_special_search(item_name: &String, popup: &mut Popup) -> Option<Popup> {
     let mut item_ids = None;
     if let Some(item_names) = &Addon::cache().item_names {
         item_ids = item_names.value.get(item_name).cloned();
@@ -62,21 +62,21 @@ fn fill_using_special_search(item_name: &String, mut popup: &mut Popup) -> Optio
             Addon::lock().context.ui.loading = Some(75);
             popup.basic_data.title = title.clone();
             popup.basic_data.href = href.clone();
-            fill_wiki_details(&href, &mut popup);
-            Addon::cache().add_popup(&href, &mut popup, true);
+            fill_wiki_details(&href, popup);
+            Addon::cache().add_popup(&href, popup, true);
         }
     }
     None
 }
 
 pub fn prepare_href_popup(href: &String, title: String) -> Popup {
-    if let Some(value) = retrieve_from_cache(&href) {
+    if let Some(value) = retrieve_from_cache(href) {
         return value;
     }
 
     let mut popup = prepare_popup(href, title);
     Addon::lock().context.ui.loading = Some(10);
-    fill_wiki_details(&href, &mut popup);
+    fill_wiki_details(href, &mut popup);
     Addon::cache().add_popup(href, &mut popup, true);
     popup
 }
@@ -85,8 +85,8 @@ fn prepare_popup(href: &String, title: String) -> Popup {
     let mut basic_data = BasicData::default();
     basic_data.title = title.clone();
     basic_data.href = href.clone();
-    let popup = Popup::new(basic_data);
-    popup
+    
+    Popup::new(basic_data)
 }
 
 fn retrieve_from_cache(href: &String) -> Option<Popup> {

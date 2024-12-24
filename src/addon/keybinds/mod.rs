@@ -96,7 +96,7 @@ fn clear_all_and_close_chat() {
 fn await_cleared_clipboard() {
     loop {
         let clipboard_text = Addon::lock().context.clipboard.get_text();
-        if !clipboard_text.is_ok() {
+        if clipboard_text.is_err() {
             break;
         }
         if let Err(_) = Addon::lock().context.clipboard.clear() {
