@@ -14,11 +14,7 @@ impl Addon {
                 .step(1 as _)
                 .step_fast(10 as _)
                 .build();
-            if new < 0 {
-                new = 0
-            } else if new > 2000 {
-                new = 2000;
-            }
+            new = new.clamp(0, 2000);
             self.config.max_popup_cache_size = new as usize;
         } else {
             self.config.max_popup_cache_size = 500;

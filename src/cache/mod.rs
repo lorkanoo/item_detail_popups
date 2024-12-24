@@ -24,7 +24,7 @@ pub struct CachedData<T> {
 }
 
 impl Cache {
-    pub fn add_popup(&mut self, key: &String, popup: &mut Popup, refresh_date: bool) {
+    pub fn add_popup(&mut self, key: &str, popup: &mut Popup, refresh_date: bool) {
         let max_popup_cache_size = Addon::lock().config.max_popup_cache_size;
         while self.popups.len() >= max_popup_cache_size {
             if self.popups.shift_remove_index(0).is_none() {
@@ -35,7 +35,7 @@ impl Cache {
             if refresh_date {
                 popup.basic_data.cached_date = Local::now();
             }
-            self.popups.insert(key.clone(), popup.clone());
+            self.popups.insert(key.to_owned(), popup.clone());
         }
     }
 }
