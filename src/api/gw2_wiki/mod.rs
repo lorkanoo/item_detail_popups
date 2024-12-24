@@ -130,7 +130,7 @@ pub fn fill_wiki_details(href: &String, popup: &mut Popup) -> bool {
                 }
 
                 let exists_selector = Selector::parse(".noarticletext").unwrap();
-                if let Some(_) = document.select(&exists_selector).next() {
+                if document.select(&exists_selector).next().is_some() {
                     return false;
                 }
 
