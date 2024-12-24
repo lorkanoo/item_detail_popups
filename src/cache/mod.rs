@@ -11,8 +11,7 @@ use std::fs::File;
 use std::io::{BufReader, BufWriter};
 use std::path::PathBuf;
 
-#[derive(Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct Cache {
     pub popups: IndexMap<String, Popup>,
     pub item_names: Option<CachedData<HashMap<String, Vec<u32>>>>,
@@ -23,7 +22,6 @@ pub struct CachedData<T> {
     pub date: DateTime<Local>,
     pub value: T,
 }
-
 
 impl Cache {
     pub fn add_popup(&mut self, key: &String, popup: &mut Popup, refresh_date: bool) {

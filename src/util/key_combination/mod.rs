@@ -24,19 +24,37 @@ pub struct KeyCombination {
 
 impl KeyCombination {
     pub fn shift_click() -> Self {
-        KeyCombination { left_click: true, shift: true, ..Default::default() }
+        KeyCombination {
+            left_click: true,
+            shift: true,
+            ..Default::default()
+        }
     }
     pub fn select_all() -> Self {
-        KeyCombination { key: Some('a'), ctrl: true, ..Default::default() }
+        KeyCombination {
+            key: Some('a'),
+            ctrl: true,
+            ..Default::default()
+        }
     }
     pub fn cut() -> Self {
-        KeyCombination { key: Some('x'), ctrl: true, ..Default::default() }
+        KeyCombination {
+            key: Some('x'),
+            ctrl: true,
+            ..Default::default()
+        }
     }
     pub fn enter() -> Self {
-        KeyCombination { key_code: Some(13), ..Default::default() }
+        KeyCombination {
+            key_code: Some(13),
+            ..Default::default()
+        }
     }
     pub fn backspace() -> Self {
-        KeyCombination { key_code: Some(8), ..Default::default() }
+        KeyCombination {
+            key_code: Some(8),
+            ..Default::default()
+        }
     }
 }
 

@@ -159,7 +159,7 @@ impl Addon {
         }
         let tag_iterator = basic_data.tags.iter_mut().enumerate().peekable();
         if tag_iterator.len() > 0 {
-            for (_, tag) in tag_iterator {          
+            for (_, tag) in tag_iterator {
                 ui.text_colored(LINK_COLOR, format!("[{}]", tag.1));
                 if ui.is_item_clicked() && map_index.is_some() {
                     ui_actions.push(UiAction::Open(tag.0.clone(), tag.1.clone()));

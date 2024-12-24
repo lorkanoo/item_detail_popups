@@ -93,6 +93,7 @@ impl UiExtended for Ui<'_> {
         unsafe { igGetMousePos(&mut mouse_pos) };
         bounds_min[0] < mouse_pos.x
             && bounds_min[1] < mouse_pos.y
-            && mouse_pos.x < bounds_max[0] && mouse_pos.y < bounds_max[1]
+            && mouse_pos.x < bounds_max[0]
+            && mouse_pos.y < bounds_max[1]
     }
 }

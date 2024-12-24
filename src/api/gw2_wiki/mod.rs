@@ -85,7 +85,7 @@ fn prepare_popup(href: &String, title: String) -> Popup {
     let mut basic_data = BasicData::default();
     basic_data.title = title.clone();
     basic_data.href = href.clone();
-    
+
     Popup::new(basic_data)
 }
 

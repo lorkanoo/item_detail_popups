@@ -1,7 +1,6 @@
 mod preset_rule;
 
 use crate::addon::Addon;
-use crate::util::game_has_focus;
 use function_name::named;
 use log::debug;
 use std::thread;
