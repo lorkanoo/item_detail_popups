@@ -99,7 +99,7 @@ fn await_cleared_clipboard() {
         if clipboard_text.is_err() {
             break;
         }
-        if let Err(_) = Addon::lock().context.clipboard.clear() {
+        if Addon::lock().context.clipboard.clear().is_err() {
             debug!("Couldn't clear clipboard content.");
         }
         thread::sleep(Duration::from_millis(20));
