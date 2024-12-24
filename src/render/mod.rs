@@ -120,7 +120,9 @@ impl Addon {
             });
         }
         if !popup.opened && map_index.is_some() {
-            ui_actions.push(UiAction::Delete(map_index.unwrap()));
+            if let Some(index) = map_index {
+                ui_actions.push(UiAction::Delete(index));
+            }
         }
     }
 
