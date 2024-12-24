@@ -81,7 +81,7 @@ pub fn prepare_href_popup(href: &String, title: String) -> Popup {
     popup
 }
 
-fn prepare_popup(href: &, title: String) -> Popup {
+fn prepare_popup(href: &str, title: String) -> Popup {
     let mut basic_data = BasicData { title: title.clone(), href: href.to_owned(), ..Default::default() };
     Popup::new(basic_data)
 }
