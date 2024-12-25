@@ -52,11 +52,7 @@ impl Addon {
 
 fn process_clipboard_text() {
     let mut retries = 5;
-    loop {
-        if retries == 0 {
-            break;
-        }
-        retries -= 1;
+    while retries > 0 {
         let clipboard_text = Addon::lock().context.clipboard.get_text();
         let clipboard_retrieved = match clipboard_text {
             Ok(clipboard_text) => {
@@ -79,6 +75,7 @@ fn process_clipboard_text() {
             break;
         }
         thread::sleep(Duration::from_millis(100));
+        retries -= 1;
     }
 }
 fn cut_all_and_close_chat() {
@@ -94,7 +91,8 @@ fn clear_all_and_close_chat() {
 }
 
 fn await_cleared_clipboard() {
-    loop {
+    let mut retries = 30;
+    while retries > 0 {
         let clipboard_text = Addon::lock().context.clipboard.get_text();
         if clipboard_text.is_err() {
             break;
@@ -103,5 +101,6 @@ fn await_cleared_clipboard() {
             debug!("Couldn't clear clipboard content.");
         }
         thread::sleep(Duration::from_millis(20));
+        retries -= 1;
     }
 }

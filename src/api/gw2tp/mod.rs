@@ -7,6 +7,7 @@ use log::{debug, info, warn};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::thread;
+use crate::cache::CachingStatus::Cached;
 
 const GW2TP_URL: &str = "https://api.gw2tp.com";
 
@@ -23,12 +24,11 @@ fn items_name_path() -> String {
 pub fn fetch_item_names_thread() {
     Addon::threads().push(thread::spawn(|| {
         debug!("[{}] started", function_name!());
-        if let Some(cache) = Addon::cache().item_names.as_ref() {
-            if let Some(expiration_date) = cache.date.checked_add_days(Days::new(1)) {
-                if expiration_date > Local::now() {
-                    info!("[{}] cache is up to date", function_name!());
-                    return;
-                }
+        let date = Addon::cache().item_names.date();
+        if let Some(expiration_date) = date.checked_add_days(Days::new(1)) {
+            if expiration_date > Local::now() {
+                info!("[{}] cache is up to date", function_name!());
+                return;
             }
         }
         match get_sync(items_name_path()) {
@@ -43,11 +43,7 @@ pub fn fetch_item_names_thread() {
                                 map.entry(name).or_default().push(id);
                                 map
                             });
-                    let cache = Some(CachedData {
-                        value: map_hashmap,
-                        date: Local::now(),
-                    });
-                    Addon::cache().item_names = cache;
+                    Addon::cache().item_names = CachedData::new(Local::now(), map_hashmap).with_caching_status(Cached);
                 }
                 Err(e) => warn!("[{}] failed to fetch json: {}", function_name!(), e),
             },

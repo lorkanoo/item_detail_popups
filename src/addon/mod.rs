@@ -1,11 +1,10 @@
 mod cache;
-mod keybinds;
+mod keybind;
 mod threads;
 
 use crate::api::gw2tp::fetch_item_names_thread;
-use crate::cache::{save_item_names, try_load_item_names, Cache};
+use crate::cache::Cache;
 use crate::config::{config_dir, migrate_configs, Config};
-use crate::context::ui::popup::Popup;
 use crate::context::{init_context, Context};
 use crate::thread::background_thread;
 use function_name::named;
@@ -79,11 +78,11 @@ impl Addon {
             if let Some(config) = Config::try_load() {
                 Addon::lock().config = config;
             }
-            if let Some(popups) = Popup::try_load() {
+            if let Some(popups) = Cache::try_load_popups() {
                 Addon::cache().popups = popups;
             }
-            if let Some(item_names) = try_load_item_names() {
-                Addon::cache().item_names = Some(item_names);
+            if let Some(item_names) = Cache::try_load_item_names() {
+                Addon::cache().item_names = item_names;
             }
         }
     }
@@ -105,7 +104,7 @@ impl Addon {
         info!("[{}] Saving configuration..", function_name!());
         addon.config.save();
         let cache = &mut Self::cache();
-        Popup::save(&cache.popups);
-        save_item_names(&cache.item_names);
+        Cache::save_popups(&cache.popups);
+        Cache::save_item_names(&cache.item_names);
     }
 }

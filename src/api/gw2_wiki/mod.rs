@@ -46,8 +46,8 @@ pub fn prepare_item_popup(item_name: &String) -> Popup {
 
 fn fill_using_special_search(item_name: &String, popup: &mut Popup) -> Option<Popup> {
     let mut item_ids = None;
-    if let Some(item_names) = &Addon::cache().item_names {
-        item_ids = item_names.value.get(item_name).cloned();
+    if let Some(item_names) = Addon::cache().item_names.value() {
+        item_ids = item_names.get(item_name).cloned();
     }
     if let Some(item_ids) = item_ids {
         let id = item_ids[0];
