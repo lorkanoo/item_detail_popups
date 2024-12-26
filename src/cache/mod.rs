@@ -49,14 +49,11 @@ impl<T> CachedData<T> {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub enum CachingStatus {
+    #[default]
     NotCached,
     InProgress,
     Cached,
 }
 
-impl Default for CachingStatus {
-    fn default() -> Self {
-        CachingStatus::NotCached
-    }
-}

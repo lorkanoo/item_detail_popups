@@ -245,17 +245,17 @@ impl Addon {
                                         let sell_text_pos = ui.cursor_screen_pos()[0];
                                         ui.text_colored(
                                             GOLD_COLOR,
-                                            &format!("{:02}g ", price.lowest_sell / 10000),
+                                            format!("{:02}g ", price.lowest_sell / 10000),
                                         );
                                         ui.same_line();
                                         ui.text_colored(
                                             SILVER_COLOR,
-                                            &format!("{:02}s ", (price.lowest_sell % 10000) / 100),
+                                            format!("{:02}s ", (price.lowest_sell % 10000) / 100),
                                         );
                                         ui.same_line();
                                         ui.text_colored(
                                             COPPER_COLOR,
-                                            &format!("{:02}c", price.lowest_sell % 100),
+                                            format!("{:02}c", price.lowest_sell % 100),
                                         );
 
                                         ui.text("Buy ");
@@ -266,17 +266,17 @@ impl Addon {
                                         ]);
                                         ui.text_colored(
                                             GOLD_COLOR,
-                                            &format!("{:02}g ", price.highest_buy / 10000),
+                                            format!("{:02}g ", price.highest_buy / 10000),
                                         );
                                         ui.same_line();
                                         ui.text_colored(
                                             SILVER_COLOR,
-                                            &format!("{:02}s ", (price.highest_buy % 10000) / 100),
+                                            format!("{:02}s ", (price.highest_buy % 10000) / 100),
                                         );
                                         ui.same_line();
                                         ui.text_colored(
                                             COPPER_COLOR,
-                                            &format!("{:02}c", price.highest_buy % 100),
+                                            format!("{:02}c", price.highest_buy % 100),
                                         );
                                         if item_ids.len() > 1 {
                                             ui.text_disabled("Showing the highest price for item with this name.");
