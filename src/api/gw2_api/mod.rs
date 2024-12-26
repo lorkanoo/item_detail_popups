@@ -51,7 +51,7 @@ pub fn fetch_prices_thread(prices_to_cache: HashMap<u32, CachedData<Price>>) {
             Ok(response) => match response.into_json::<Vec<PriceData>>() {
                 Ok(prices) => {
                     for price_data in prices {
-                        if prices_to_cache.get(&price_data.id).is_some() {
+                        if prices_to_cache.contains_key(&price_data.id) {
                             let new_price = Price {
                                 highest_buy: price_data.buys.unit_price,
                                 lowest_sell: price_data.sells.unit_price,

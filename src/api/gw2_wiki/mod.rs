@@ -26,10 +26,10 @@ fn special_search_href(item_id: u32) -> String {
     )
 }
 
-pub fn prepare_item_popup(item_name: &String) -> Popup {
+pub fn prepare_item_popup(item_name: &str) -> Popup {
     let item_name_href = format!("/wiki/{}", item_name.replace(" ", "_"));
 
-    let mut popup = prepare_popup(&item_name_href, item_name.clone());
+    let mut popup = prepare_popup(&item_name_href, item_name.to_owned());
     Addon::lock().context.ui.loading = Some(10);
     if let Some(mut value) = retrieve_from_cache(&item_name_href) {
         value.basic_data.item_ids = popup.basic_data.item_ids.clone();
