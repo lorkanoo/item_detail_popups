@@ -48,12 +48,10 @@ impl<T> CachedData<T> {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub enum CachingStatus {
     #[default]
     NotCached,
     InProgress,
     Cached,
 }
-
