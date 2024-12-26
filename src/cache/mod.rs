@@ -1,13 +1,13 @@
-mod price;
 mod item_name;
 mod popup;
+pub mod price;
 
+use crate::cache::price::Price;
 use crate::context::ui::popup::Popup;
 use chrono::{DateTime, Local};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::cache::price::Price;
 
 #[derive(Clone, Serialize, Deserialize, Default)]
 pub struct Cache {
@@ -33,7 +33,7 @@ impl<T> CachedData<T> {
     }
     pub fn value(&self) -> Option<&T> {
         if matches!(self.caching_status, CachingStatus::Cached) {
-            return Some(&self.value)
+            return Some(&self.value);
         }
         None
     }
@@ -52,7 +52,7 @@ impl<T> CachedData<T> {
 pub enum CachingStatus {
     NotCached,
     InProgress,
-    Cached
+    Cached,
 }
 
 impl Default for CachingStatus {

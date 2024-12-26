@@ -16,6 +16,8 @@ pub struct Config {
     pub max_popup_cache_size: usize,
     //hours, minutes
     pub max_popup_cache_expiration: (i64, i64),
+    #[serde(default = "default_price_expiration_sec")]
+    pub price_expiration_sec: i64,
 }
 
 impl Default for Config {
@@ -24,6 +26,7 @@ impl Default for Config {
             version: VERSION.to_string(),
             max_popup_cache_size: 500,
             max_popup_cache_expiration: (336, 0),
+            price_expiration_sec: default_price_expiration_sec(),
         }
     }
 }
@@ -83,6 +86,10 @@ pub fn game_dir() -> PathBuf {
 
 fn default_version() -> String {
     VERSION.to_string()
+}
+
+fn default_price_expiration_sec() -> i64 {
+    30
 }
 
 pub fn migrate_configs(addon: &mut MutexGuard<Addon>) {

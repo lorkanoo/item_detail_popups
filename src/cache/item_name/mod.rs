@@ -1,4 +1,4 @@
-
+use crate::cache::{Cache, CachedData};
 use crate::config::config_dir;
 use function_name::named;
 use log::info;
@@ -6,8 +6,6 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
 use std::path::PathBuf;
-use crate::cache::{Cache, CachedData};
-
 
 impl Cache {
     #[named]
@@ -49,5 +47,4 @@ impl Cache {
     pub fn item_names_file() -> PathBuf {
         config_dir().join("item_names_cache.json")
     }
-    
 }

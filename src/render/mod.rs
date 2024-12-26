@@ -1,17 +1,25 @@
 use crate::addon::Addon;
 use crate::api::gw2_wiki::{href_to_wiki_url, prepare_href_popup};
+use crate::cache::Cache;
 use crate::context::ui::popup::{BasicData, Popup, Style, Token};
 use crate::render::util::ui::extended::UiExtended;
-use crate::render::util::ui::{process_ui_actions_for_vec, UiAction, LINK_COLOR, SUCCESS_COLOR};
+use crate::render::util::ui::{
+    process_ui_actions_for_vec, UiAction, COPPER_COLOR, GOLD_COLOR, LINK_COLOR, SILVER_COLOR,
+    SUCCESS_COLOR,
+};
 use nexus::imgui::{Condition, StyleVar, Ui, Window};
 use std::thread;
 use std::time::Duration;
+use util::ui::UiLink;
 
 mod options;
 pub mod util;
 
 impl Addon {
     pub fn render(&mut self, ui: &Ui) {
+        if !self.context.run_background_thread {
+            return;
+        }
         if let Some(progress) = self.context.ui.loading {
             ui.tooltip(|| {
                 ui.text(format!("Loading ({}%)", progress));
@@ -28,7 +36,13 @@ impl Addon {
     fn render_hovered_popup(&mut self, ui: &Ui) {
         let mut ui_actions: Vec<UiAction> = vec![];
         if let Some(popup) = self.context.ui.hovered_popup.as_mut() {
-            Self::render_popup(ui, None, popup, &mut ui_actions);
+            Self::render_popup(
+                ui,
+                None,
+                popup,
+                &mut ui_actions,
+                self.config.price_expiration_sec,
+            );
         }
         for ui_action in &ui_actions {
             match ui_action {
@@ -47,13 +61,19 @@ impl Addon {
     fn render_pinned_popups(&mut self, ui: &Ui) {
         let mut ui_actions = vec![];
         for (i, popup) in self.context.ui.pinned_popups.iter_mut().enumerate() {
-            Self::render_popup(ui, Some(i), popup, &mut ui_actions);
+            Self::render_popup(
+                ui,
+                Some(i),
+                popup,
+                &mut ui_actions,
+                self.config.price_expiration_sec,
+            );
         }
         process_ui_actions_for_vec(&mut self.context.ui.pinned_popups, &mut ui_actions);
         for ui_action in &ui_actions {
-            if let UiAction::Open(href, title) = ui_action {
-                let moved_href = href.clone();
-                let moved_title = title.clone();
+            if let UiAction::Open(ui_link) = ui_action {
+                let moved_href = ui_link.href.clone();
+                let moved_title = ui_link.title.clone();
                 Addon::threads().push(thread::spawn(move || {
                     Addon::lock().context.ui.loading = Some(1);
                     thread::sleep(Duration::from_millis(150));
@@ -70,6 +90,7 @@ impl Addon {
         map_index: Option<usize>,
         popup: &mut Popup,
         ui_actions: &mut Vec<UiAction>,
+        price_expiration_sec: i64,
     ) {
         if popup.opened && popup.basic_data.pinned {
             let basic_data = &mut popup.basic_data;
@@ -90,6 +111,7 @@ impl Addon {
                         basic_data,
                         ui_actions,
                         *ui.window_pos().first().unwrap() + 640.0,
+                        price_expiration_sec,
                     );
                 });
             style.pop();
@@ -111,6 +133,7 @@ impl Addon {
                         &mut popup.basic_data,
                         ui_actions,
                         width_limit,
+                        price_expiration_sec,
                     );
                 });
                 Self::close_popup_on_mouse_away(ui, ui_actions);
@@ -154,6 +177,7 @@ impl Addon {
         basic_data: &mut BasicData,
         ui_actions: &mut Vec<UiAction>,
         width_limit: f32,
+        price_expiration_sec: i64,
     ) {
         if !basic_data.pinned {
             ui.text(&basic_data.title);
@@ -164,7 +188,10 @@ impl Addon {
             for (_, tag) in tag_iterator {
                 ui.text_colored(LINK_COLOR, format!("[{}]", tag.1));
                 if ui.is_item_clicked() && map_index.is_some() {
-                    ui_actions.push(UiAction::Open(tag.0.clone(), tag.1.clone()));
+                    ui_actions.push(UiAction::Open(UiLink {
+                        href: tag.0.clone(),
+                        title: tag.1.clone(),
+                    }));
                 }
                 ui.same_line();
                 let cursor_pos = ui.cursor_screen_pos();
@@ -174,19 +201,96 @@ impl Addon {
             }
             ui.new_line();
         }
-        let render_tab_bar = !basic_data.description.is_empty() || !basic_data.notes.is_empty();
+        let render_tab_bar = !basic_data.description.is_empty()
+            || !basic_data.notes.is_empty()
+            || basic_data.item_ids.is_some();
         if render_tab_bar {
             if let Some(_token) = ui.tab_bar(format!("tabs##rps{}", popup_id)) {
-                if !basic_data.description.is_empty() {
-                    if let Some(_token) = ui.tab_item(format!("Description##rps{}", popup_id)) {
-                        Self::render_tokens(
-                            ui,
-                            map_index,
-                            &basic_data.description,
-                            ui_actions,
-                            width_limit,
-                        );
-                        ui.new_line();
+                if !basic_data.description.is_empty() || basic_data.item_ids.is_some() {
+                    if let Some(_token) = ui.tab_item(format!("General##rps{}", popup_id)) {
+                        if !basic_data.description.is_empty() {
+                            Self::render_tokens(
+                                ui,
+                                map_index,
+                                &basic_data.description,
+                                ui_actions,
+                                width_limit,
+                            );
+                            ui.new_line();
+                        }
+                        if let Some(item_ids) = &basic_data.item_ids {
+                            ui.spacing();
+                            let prices = Cache::prices(item_ids.clone(), price_expiration_sec);
+                            let mut highest_sell_price = None;
+                            for (item_id, price_data) in &prices {
+                                if let Some(price) = price_data.value() {
+                                    match highest_sell_price {
+                                        None => {
+                                            highest_sell_price = Some((*item_id, price.lowest_sell))
+                                        }
+                                        Some((_, current_max))
+                                            if price.lowest_sell > current_max =>
+                                        {
+                                            highest_sell_price = Some((*item_id, price.lowest_sell))
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                            }
+                            if let Some((item_id, _)) = highest_sell_price {
+                                if let Some(price_data) = prices.get(&item_id) {
+                                    if let Some(price) = price_data.value() {
+                                        ui.text("Sell ");
+                                        ui.same_line();
+                                        let sell_text_pos = ui.cursor_screen_pos()[0];
+                                        ui.text_colored(
+                                            GOLD_COLOR,
+                                            &format!("{:02}g ", price.lowest_sell / 10000),
+                                        );
+                                        ui.same_line();
+                                        ui.text_colored(
+                                            SILVER_COLOR,
+                                            &format!("{:02}s ", (price.lowest_sell % 10000) / 100),
+                                        );
+                                        ui.same_line();
+                                        ui.text_colored(
+                                            COPPER_COLOR,
+                                            &format!("{:02}c", price.lowest_sell % 100),
+                                        );
+
+                                        ui.text("Buy ");
+                                        ui.same_line();
+                                        ui.set_cursor_screen_pos([
+                                            sell_text_pos,
+                                            ui.cursor_screen_pos()[1],
+                                        ]);
+                                        ui.text_colored(
+                                            GOLD_COLOR,
+                                            &format!("{:02}g ", price.highest_buy / 10000),
+                                        );
+                                        ui.same_line();
+                                        ui.text_colored(
+                                            SILVER_COLOR,
+                                            &format!("{:02}s ", (price.highest_buy % 10000) / 100),
+                                        );
+                                        ui.same_line();
+                                        ui.text_colored(
+                                            COPPER_COLOR,
+                                            &format!("{:02}c", price.highest_buy % 100),
+                                        );
+                                        if item_ids.len() > 1 {
+                                            ui.text_disabled("Showing the highest price for item with this name.");
+                                        }
+                                    }
+                                }
+                            } else {
+                                ui.text("Sell ");
+                                ui.text("Buy ");
+                                if item_ids.len() > 1 {
+                                    ui.text_disabled("Showing the price of the highest rarity.");
+                                }
+                            }
+                        }
                     }
                 }
                 if !basic_data.notes.is_empty() {
@@ -202,6 +306,7 @@ impl Addon {
                 }
             }
         }
+
         if map_index.is_some() {
             ui.spacing();
             if ui.button(format!("Open wiki page##rps{}", popup_id)) {
@@ -242,10 +347,13 @@ impl Addon {
                         }
                     }
                 }
-                Token::Tag(href, text) => {
+                Token::Tag(href, text, title) => {
                     ui.text_colored(LINK_COLOR, text);
                     if ui.is_item_clicked() && map_index.is_some() {
-                        ui_actions.push(UiAction::Open(href.to_string(), text.clone()));
+                        ui_actions.push(UiAction::Open(UiLink {
+                            title: title.clone(),
+                            href: href.to_string(),
+                        }));
                     }
                 }
                 Token::ListElement => {

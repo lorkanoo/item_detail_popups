@@ -32,8 +32,6 @@ impl Popup {
         clone.id = id;
         clone
     }
-
-    
 }
 
 impl UiElement for Popup {
@@ -48,10 +46,11 @@ impl UiElement for Popup {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BasicData {
+    pub item_ids: Option<Vec<u32>>,
     pub title: String,
     pub description: Vec<Token>,
     pub notes: Vec<Token>,
-    // href, item_name
+    // tag href, tag name
     pub tags: BTreeMap<String, String>,
     pub pinned: bool,
     pub pos: Option<[f32; 2]>,
@@ -62,8 +61,8 @@ pub struct BasicData {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Token {
     Text(String, Style),
-    // href, name
-    Tag(String, String),
+    // href, text, title
+    Tag(String, String, String),
     ListElement,
 }
 
@@ -76,6 +75,7 @@ pub enum Style {
 impl Default for BasicData {
     fn default() -> Self {
         Self {
+            item_ids: None,
             title: "".to_string(),
             description: vec![],
             notes: vec![],

@@ -1,13 +1,13 @@
 use crate::addon::Addon;
 use crate::api::get_sync;
 use crate::cache::CachedData;
+use crate::cache::CachingStatus::Cached;
 use chrono::{Days, Local};
 use function_name::named;
 use log::{debug, info, warn};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::thread;
-use crate::cache::CachingStatus::Cached;
 
 const GW2TP_URL: &str = "https://api.gw2tp.com";
 
@@ -43,7 +43,8 @@ pub fn fetch_item_names_thread() {
                                 map.entry(name).or_default().push(id);
                                 map
                             });
-                    Addon::cache().item_names = CachedData::new(Local::now(), map_hashmap).with_caching_status(Cached);
+                    Addon::cache().item_names =
+                        CachedData::new(Local::now(), map_hashmap).with_caching_status(Cached);
                 }
                 Err(e) => warn!("[{}] failed to fetch json: {}", function_name!(), e),
             },

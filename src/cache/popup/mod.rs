@@ -1,14 +1,14 @@
-use std::fs::File;
-use std::io::{BufReader, BufWriter};
-use std::path::PathBuf;
 use crate::addon::Addon;
+use crate::cache::Cache;
+use crate::config::config_dir;
 use crate::context::ui::popup::Popup;
 use chrono::Local;
 use function_name::named;
 use indexmap::IndexMap;
 use log::info;
-use crate::cache::Cache;
-use crate::config::config_dir;
+use std::fs::File;
+use std::io::{BufReader, BufWriter};
+use std::path::PathBuf;
 
 impl Cache {
     pub fn add_popup(&mut self, key: &str, popup: &mut Popup, refresh_date: bool) {

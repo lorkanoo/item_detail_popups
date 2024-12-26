@@ -1,5 +1,3 @@
-mod preset_rule;
-
 use crate::addon::Addon;
 use function_name::named;
 use log::debug;

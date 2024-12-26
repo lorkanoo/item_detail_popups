@@ -8,6 +8,3 @@ pub struct UiContext {
     pub pinned_popups: Vec<Popup>,
     pub loading: Option<i16>,
 }
-
-#[derive(Clone, Debug)]
-pub struct Errors {}

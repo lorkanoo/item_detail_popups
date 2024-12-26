@@ -27,20 +27,17 @@ impl Addon {
             ui.text("Refresh popups older than:");
             ui.input_int("Hours", &mut hours).build();
             ui.input_int("Minutes", &mut minutes).build();
-            if hours < 0 {
-                hours = 0;
-            }
-            if minutes < 0 {
-                minutes = 0;
-            }
-            if hours > 10000 {
-                hours = 10000;
-            }
-            if minutes > 59 {
-                minutes = 59;
-            }
+            hours = hours.clamp(0, 10000);
+            minutes = minutes.clamp(0, 59);
             self.config.max_popup_cache_expiration.0 = hours as i64;
             self.config.max_popup_cache_expiration.1 = minutes as i64;
+        }
+        if let Ok(mut price_expiration) = i32::try_from(self.config.price_expiration_sec) {
+            ui.spacing();
+            ui.input_int("Price refresh frequency (seconds)", &mut price_expiration)
+                .build();
+            price_expiration = price_expiration.clamp(10, 300);
+            self.config.price_expiration_sec = price_expiration as i64;
         }
         ui.spacing();
         ui.text(format!("{:.2}% cache used", cache_used));

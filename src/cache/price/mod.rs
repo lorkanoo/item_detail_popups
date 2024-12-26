@@ -1,59 +1,51 @@
-use std::collections::HashMap;
-use std::fs::File;
-use std::io::{BufReader, BufWriter};
-use std::path::PathBuf;
-use function_name::named;
-use log::info;
+use crate::addon::Addon;
+use crate::api::gw2_api::fetch_prices_thread;
+use crate::cache::{Cache, CachedData, CachingStatus};
+use chrono::{Local, TimeDelta};
 use serde::{Deserialize, Serialize};
-use crate::cache::{Cache, CachedData};
-use crate::config::config_dir;
-
-#[derive(Clone, Serialize, Deserialize)]
+use std::collections::HashMap;
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct Price {
-    highest_buy: u32,
-    lowest_sell: u32,
+    pub highest_buy: u32,
+    pub lowest_sell: u32,
 }
 
 impl Cache {
-    
-    #[named]
-    pub fn try_load_prices() -> Option<HashMap<u32, CachedData<Price>>> {
-        let path = Self::prices_file();
-        let file = File::open(&path)
-            .inspect_err(|err| log::warn!("Failed to read price_cache: {err}"))
-            .ok()?;
-        let reader = BufReader::new(file);
-        let config = serde_json::from_reader(reader)
-            .inspect_err(|err| log::warn!("Failed to parse price_cache: {err}"))
-            .ok()?;
-        info!(
-                "[{}] Loaded price_cache from \"{}\"",
-                function_name!(),
-                path.display()
-            );
-        Some(config)
-    }
-    
-    #[named]
-    pub fn save_prices(popups: &HashMap<u32, CachedData<Price>>) {
-        let path = Self::prices_file();
-        match File::create(&path) {
-            Ok(file) => {
-                let writer = BufWriter::new(file);
-                serde_json::to_writer_pretty(writer, &popups)
-                    .expect("failed to serialize price_cache");
-                info!(
-                        "[{}] Saved price_cache to \"{}\"",
-                        function_name!(),
-                        path.display()
-                    )
+    pub fn prices(
+        item_ids: Vec<u32>,
+        price_expiration_sec: i64,
+    ) -> HashMap<u32, CachedData<Price>> {
+        let mut prices_to_cache = HashMap::new();
+        let mut result = HashMap::new();
+        for item_id in item_ids {
+            match Addon::cache().prices.get(&item_id) {
+                Some(price) => {
+                    result.insert(item_id, price.clone());
+                    if let Some(expiration_date) = price
+                        .date
+                        .checked_add_signed(TimeDelta::seconds(price_expiration_sec))
+                    {
+                        if Local::now() > expiration_date
+                            && !matches!(&price.caching_status, CachingStatus::InProgress)
+                        {
+                            let new = CachedData::new(Local::now(), Price::default())
+                                .with_caching_status(CachingStatus::InProgress);
+                            prices_to_cache.insert(item_id, new.clone());
+                        }
+                    }
+                }
+                None => {
+                    let new = CachedData::new(Local::now(), Price::default())
+                        .with_caching_status(CachingStatus::InProgress);
+                    prices_to_cache.insert(item_id, new.clone());
+                    result.insert(item_id, new);
+                }
             }
-            Err(err) => log::error!("Failed to save price_cache: {err}"),
         }
-    }
-    
-    pub fn prices_file() -> PathBuf {
-        config_dir().join("price_cache.json")
-    }
+        if !prices_to_cache.is_empty() {
+            fetch_prices_thread(prices_to_cache);
+        }
 
+        result
+    }
 }

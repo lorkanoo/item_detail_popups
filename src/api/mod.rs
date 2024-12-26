@@ -1,5 +1,6 @@
 use lazy_static::lazy_static;
 
+pub mod gw2_api;
 pub mod gw2_wiki;
 pub mod gw2tp;
 

@@ -28,15 +28,21 @@ fn special_search_href(item_id: u32) -> String {
 
 pub fn prepare_item_popup(item_name: &String) -> Popup {
     let item_name_href = format!("/wiki/{}", item_name.replace(" ", "_"));
-    if let Some(value) = retrieve_from_cache(&item_name_href) {
-        return value;
-    }
+
     let mut popup = prepare_popup(&item_name_href, item_name.clone());
     Addon::lock().context.ui.loading = Some(10);
+    if let Some(mut value) = retrieve_from_cache(&item_name_href) {
+        value.basic_data.item_ids = popup.basic_data.item_ids.clone();
+        value.basic_data.title = popup.basic_data.title.clone();
+        debug!("Found item IDs: {:?}", value.basic_data.item_ids);
+        return value;
+    }
     if !fill_wiki_details(&item_name_href, &mut popup) {
         Addon::lock().context.ui.loading = Some(50);
-        if let Some(mut value) = fill_using_special_search(item_name, &mut popup) {
+        if let Some(mut value) = fill_using_special_search(&mut popup) {
             Addon::cache().add_popup(&item_name_href, &mut value, true);
+            value.basic_data.item_ids = popup.basic_data.item_ids.clone();
+            value.basic_data.title = popup.basic_data.title.clone();
             return value;
         }
     }
@@ -44,23 +50,17 @@ pub fn prepare_item_popup(item_name: &String) -> Popup {
     popup
 }
 
-fn fill_using_special_search(item_name: &String, popup: &mut Popup) -> Option<Popup> {
-    let mut item_ids = None;
-    if let Some(item_names) = Addon::cache().item_names.value() {
-        item_ids = item_names.get(item_name).cloned();
-    }
-    if let Some(item_ids) = item_ids {
+fn fill_using_special_search(popup: &mut Popup) -> Option<Popup> {
+    if let Some(item_ids) = &popup.basic_data.item_ids {
         let id = item_ids[0];
         let special_search_result = special_search(id, &special_search_href(id));
         if let Some(result) = special_search_result {
             let href = result.0;
-            let title = result.1;
             if let Some(mut value) = retrieve_from_cache(&href) {
                 Addon::cache().add_popup(&href, &mut value, true);
                 return Some(value);
             }
             Addon::lock().context.ui.loading = Some(75);
-            popup.basic_data.title = title.clone();
             popup.basic_data.href = href.clone();
             fill_wiki_details(&href, popup);
             Addon::cache().add_popup(&href, popup, true);
@@ -70,23 +70,28 @@ fn fill_using_special_search(item_name: &String, popup: &mut Popup) -> Option<Po
 }
 
 pub fn prepare_href_popup(href: &String, title: String) -> Popup {
-    if let Some(value) = retrieve_from_cache(href) {
+    let mut popup = prepare_popup(href, title);
+    log::info!("popup: {:?}", popup);
+    Addon::lock().context.ui.loading = Some(10);
+    if let Some(mut value) = retrieve_from_cache(href) {
+        value.basic_data.item_ids = popup.basic_data.item_ids.clone();
         return value;
     }
 
-    let mut popup = prepare_popup(href, title);
-    Addon::lock().context.ui.loading = Some(10);
     fill_wiki_details(href, &mut popup);
     Addon::cache().add_popup(href, &mut popup, true);
     popup
 }
 
 fn prepare_popup(href: &str, title: String) -> Popup {
-    let basic_data = BasicData {
+    let mut basic_data = BasicData {
         title: title.clone(),
         href: href.to_owned(),
         ..Default::default()
     };
+    if let Some(item_names) = Addon::cache().item_names.value() {
+        basic_data.item_ids = item_names.get(&title).cloned();
+    }
     Popup::new(basic_data)
 }
 
@@ -159,7 +164,7 @@ pub fn fill_wiki_details(href: &String, popup: &mut Popup) -> bool {
             }
         },
         Err(_) => {
-            warn!("[{}] could not fetch data from wiki", function_name!());
+            debug!("[{}] could not fetch data from wiki", function_name!());
             false
         }
     }
@@ -203,7 +208,7 @@ pub fn special_search(item_id: u32, href: &String) -> Option<(String, String)> {
             }
         },
         Err(_) => {
-            warn!("[{}] could not fetch data from wiki", function_name!());
+            debug!("[{}] could not fetch data from wiki", function_name!());
             None
         }
     }
@@ -224,14 +229,15 @@ fn parse_node(tokens: &mut Vec<Token>, node: NodeRef<Node>, style: &mut Style) {
         if let Some(href) = element.value().attr("href") {
             if let Some(child) = children_iterator.next() {
                 if let Some(text) = child.value().as_text() {
+                    let text = text.text.trim().to_string();
+                    let mut title = text.clone();
+                    if let Some(title_attr) = element.value().attr("title") {
+                        title = title_attr.trim().to_string();
+                    }
                     tokens.push(Token::Tag(
                         href.split("#").next().unwrap_or("").to_string(),
-                        text.text.trim().to_string(),
-                    ));
-                } else if let Some(title) = element.value().attr("title") {
-                    tokens.push(Token::Tag(
-                        href.split("#").next().unwrap_or("").to_string(),
-                        title.trim().to_string(),
+                        text,
+                        title,
                     ));
                 }
             }
