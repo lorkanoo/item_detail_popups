@@ -7,9 +7,9 @@ use crate::render::util::ui::{
     process_ui_actions_for_vec, UiAction, COPPER_COLOR, GOLD_COLOR, LINK_COLOR, SILVER_COLOR,
     SUCCESS_COLOR,
 };
-use nexus::imgui::{Condition, StyleVar, Ui, Window};
-use std::thread;
+use nexus::imgui::{sys, ChildWindow, Condition, Ui, Window};
 use std::time::Duration;
+use std::{ptr, thread};
 use util::ui::UiLink;
 
 mod options;
@@ -95,14 +95,17 @@ impl Addon {
         if popup.opened && popup.basic_data.pinned {
             let basic_data = &mut popup.basic_data;
             let size = ui.calc_text_size(&basic_data.title);
-            let style =
-                ui.push_style_var(StyleVar::WindowMinSize([&size[0] * 1.25, &size[1] * 1.0]));
+            let screen_height = ui.io().display_size[1];
             Window::new(format!("{}##idp{}", basic_data.title.clone(), popup.id))
                 .position(basic_data.pos.unwrap_or([0.0, 0.0]), Condition::Appearing)
                 .collapsible(false)
                 .always_auto_resize(true)
                 .save_settings(false)
                 .opened(&mut popup.opened)
+                .size_constraints(
+                    [&size[0] * 1.25, &size[1] * 1.0],
+                    [f32::MAX, screen_height * 0.4],
+                )
                 .build(ui, || {
                     Self::render_basic_data(
                         ui,
@@ -114,7 +117,6 @@ impl Addon {
                         price_expiration_sec,
                     );
                 });
-            style.pop();
         } else {
             if !popup.opened {
                 ui.open_popup("##popup_idp");
@@ -170,6 +172,17 @@ impl Addon {
         }
     }
 
+    fn render_price(ui: &Ui, price: u32, x_pos: Option<f32>) {
+        if let Some(pos) = x_pos {
+            ui.set_cursor_screen_pos([pos, ui.cursor_screen_pos()[1]]);
+        }
+        ui.text_colored(GOLD_COLOR, format!("{:02}g ", price / 10000));
+        ui.same_line();
+        ui.text_colored(SILVER_COLOR, format!("{:02}s ", (price % 10000) / 100));
+        ui.same_line();
+        ui.text_colored(COPPER_COLOR, format!("{:02}c", price % 100));
+    }
+
     fn render_basic_data(
         ui: &Ui,
         map_index: Option<usize>,
@@ -203,7 +216,8 @@ impl Addon {
         }
         let render_tab_bar = !basic_data.description.is_empty()
             || !basic_data.notes.is_empty()
-            || basic_data.item_ids.is_some();
+            || basic_data.item_ids.is_some()
+            || !basic_data.acquisition.is_empty();
         if render_tab_bar {
             if let Some(_token) = ui.tab_bar(format!("tabs##rps{}", popup_id)) {
                 if !basic_data.description.is_empty() || basic_data.item_ids.is_some() {
@@ -243,40 +257,14 @@ impl Addon {
                                         ui.text("Sell ");
                                         ui.same_line();
                                         let sell_text_pos = ui.cursor_screen_pos()[0];
-                                        ui.text_colored(
-                                            GOLD_COLOR,
-                                            format!("{:02}g ", price.lowest_sell / 10000),
-                                        );
-                                        ui.same_line();
-                                        ui.text_colored(
-                                            SILVER_COLOR,
-                                            format!("{:02}s ", (price.lowest_sell % 10000) / 100),
-                                        );
-                                        ui.same_line();
-                                        ui.text_colored(
-                                            COPPER_COLOR,
-                                            format!("{:02}c", price.lowest_sell % 100),
-                                        );
+                                        Self::render_price(ui, price.lowest_sell, None);
 
                                         ui.text("Buy ");
                                         ui.same_line();
-                                        ui.set_cursor_screen_pos([
-                                            sell_text_pos,
-                                            ui.cursor_screen_pos()[1],
-                                        ]);
-                                        ui.text_colored(
-                                            GOLD_COLOR,
-                                            format!("{:02}g ", price.highest_buy / 10000),
-                                        );
-                                        ui.same_line();
-                                        ui.text_colored(
-                                            SILVER_COLOR,
-                                            format!("{:02}s ", (price.highest_buy % 10000) / 100),
-                                        );
-                                        ui.same_line();
-                                        ui.text_colored(
-                                            COPPER_COLOR,
-                                            format!("{:02}c", price.highest_buy % 100),
+                                        Self::render_price(
+                                            ui,
+                                            price.highest_buy,
+                                            Some(sell_text_pos),
                                         );
                                         if item_ids.len() > 1 {
                                             ui.text_disabled("Showing the highest price for item with this name.");
@@ -293,15 +281,70 @@ impl Addon {
                         }
                     }
                 }
+                if !basic_data.acquisition.is_empty() {
+                    if let Some(_token) = ui.tab_item(format!("Acquisition##rps{}", popup_id)) {
+                        let screen_height = ui.io().display_size[1];
+                        if basic_data.acquisition.len() > 25 {
+                            Self::next_window_size_constraints(
+                                [700.0, screen_height * 0.15],
+                                [f32::MAX, screen_height * 0.15],
+                            );
+                            ChildWindow::new(
+                                format!("acquisition_scroll##rps{}", popup_id).as_str(),
+                            )
+                            .border(true)
+                            .scroll_bar(true)
+                            .build(ui, || {
+                                Self::render_tokens(
+                                    ui,
+                                    map_index,
+                                    &basic_data.acquisition,
+                                    ui_actions,
+                                    width_limit,
+                                );
+                            });
+                        } else {
+                            Self::render_tokens(
+                                ui,
+                                map_index,
+                                &basic_data.acquisition,
+                                ui_actions,
+                                width_limit,
+                            );
+                            ui.new_line();
+                        }
+                    }
+                }
                 if !basic_data.notes.is_empty() {
                     if let Some(_token) = ui.tab_item(format!("Notes##rps{}", popup_id)) {
-                        Self::render_tokens(
-                            ui,
-                            map_index,
-                            &basic_data.notes,
-                            ui_actions,
-                            width_limit,
-                        );
+                        let screen_height = ui.io().display_size[1];
+                        if basic_data.notes.len() > 25 {
+                            Self::next_window_size_constraints(
+                                [700.0, screen_height * 0.15],
+                                [f32::MAX, screen_height * 0.15],
+                            );
+                            ChildWindow::new(format!("notes_scroll##rps{}", popup_id).as_str())
+                                .border(true)
+                                .scroll_bar(true)
+                                .build(ui, || {
+                                    Self::render_tokens(
+                                        ui,
+                                        map_index,
+                                        &basic_data.notes,
+                                        ui_actions,
+                                        width_limit,
+                                    );
+                                });
+                        } else {
+                            Self::render_tokens(
+                                ui,
+                                map_index,
+                                &basic_data.notes,
+                                ui_actions,
+                                width_limit,
+                            );
+                            ui.new_line();
+                        }
                     }
                 }
             }
@@ -317,6 +360,17 @@ impl Addon {
         }
     }
 
+    pub fn next_window_size_constraints(size_min: [f32; 2], size_max: [f32; 2]) {
+        unsafe {
+            sys::igSetNextWindowSizeConstraints(
+                size_min.into(),
+                size_max.into(),
+                None,
+                ptr::null_mut(),
+            )
+        }
+    }
+
     fn render_tokens(
         ui: &Ui,
         map_index: Option<usize>,
@@ -324,50 +378,127 @@ impl Addon {
         ui_actions: &mut Vec<UiAction>,
         width_limit: f32,
     ) {
+        ui.spacing();
+        let mut starts_with_list = tokens.first().map_or(false, |t| {
+            matches!(t, Token::ListElement) || matches!(t, Token::Indent(_))
+        });
+        let mut current_indent = -1;
         for token in tokens {
             match token {
-                Token::Text(text, style) => {
-                    for word in text.split(" ") {
-                        if word.is_empty() {
-                            continue;
-                        }
-                        if matches!(word, "." | ",") {
-                            ui.same_line();
-                        }
-                        match style {
-                            Style::Normal => ui.text(word),
-                            Style::Highlighted => ui.text_colored(SUCCESS_COLOR, word),
-                        }
-
-                        ui.same_line();
-
-                        let cursor_pos = ui.cursor_screen_pos();
-                        if *cursor_pos.first().unwrap() > width_limit {
-                            ui.new_line();
-                        }
-                    }
+                Token::Indent(depth) => {
+                    current_indent = *depth;
+                    continue;
                 }
-                Token::Tag(href, text, title) => {
-                    ui.text_colored(LINK_COLOR, text);
-                    if ui.is_item_clicked() && map_index.is_some() {
-                        ui_actions.push(UiAction::Open(UiLink {
-                            title: title.clone(),
-                            href: href.to_string(),
-                        }));
-                    }
+                Token::Spacing => {
+                    ui.spacing();
+                    continue;
+                }
+                Token::Text(text, style) => {
+                    Self::render_text(ui, text, style, current_indent, width_limit);
+                }
+                Token::Tag(tag_params) => {
+                    Self::render_tag(
+                        ui,
+                        &tag_params.href,
+                        &tag_params.text,
+                        &tag_params.title,
+                        map_index,
+                        ui_actions,
+                        current_indent,
+                        width_limit,
+                    );
                 }
                 Token::ListElement => {
-                    ui.same_line();
-                    ui.new_line();
-                    ui.text("-");
+                    Self::render_list_element(ui, &mut starts_with_list, current_indent);
                 }
             }
             ui.same_line();
-            let cursor_pos = ui.cursor_screen_pos();
-            if cursor_pos[0] > width_limit {
-                ui.new_line();
-            }
+            Self::handle_line_wrap(ui, current_indent, width_limit);
         }
-        ui.same_line();
+    }
+
+    fn render_words<F>(
+        ui: &Ui,
+        text: &str,
+        current_indent: i32,
+        width_limit: f32,
+        mut render_word: F,
+    ) where
+        F: FnMut(&Ui, &str),
+    {
+        for word in text.split(" ") {
+            if word.is_empty() {
+                continue;
+            }
+            if matches!(word, "." | ",") {
+                ui.same_line();
+            }
+            render_word(ui, word);
+            ui.same_line();
+            Self::handle_line_wrap(ui, current_indent, width_limit);
+        }
+    }
+
+    fn render_text(ui: &Ui, text: &str, style: &Style, current_indent: i32, width_limit: f32) {
+        Self::render_words(
+            ui,
+            text,
+            current_indent,
+            width_limit,
+            |ui, word| match style {
+                Style::Normal => ui.text(word),
+                Style::Highlighted => ui.text_colored(SUCCESS_COLOR, word),
+                Style::Disabled => ui.text_disabled(word),
+            },
+        );
+    }
+
+    fn render_tag(
+        ui: &Ui,
+        href: &str,
+        text: &str,
+        title: &str,
+        map_index: Option<usize>,
+        ui_actions: &mut Vec<UiAction>,
+        current_indent: i32,
+        width_limit: f32,
+    ) {
+        let href = href.to_string();
+        let title = title.to_string();
+        Self::render_words(ui, text, current_indent, width_limit, |ui, word| {
+            ui.text_colored(LINK_COLOR, word);
+            if ui.is_item_clicked() && map_index.is_some() {
+                ui_actions.push(UiAction::Open(UiLink {
+                    title: title.clone(),
+                    href: href.clone(),
+                }));
+            }
+        });
+    }
+
+    fn render_list_element(ui: &Ui, starts_with_list: &mut bool, current_indent: i32) {
+        if !*starts_with_list {
+            ui.new_line();
+            Self::add_indent(ui, current_indent);
+        }
+        *starts_with_list = false;
+        ui.text("-");
+    }
+
+    fn handle_line_wrap(ui: &Ui, current_indent: i32, width_limit: f32) {
+        let cursor_pos = ui.cursor_screen_pos();
+        if cursor_pos[0] > width_limit {
+            ui.new_line();
+            Self::add_indent(ui, current_indent);
+        } else {
+            ui.same_line();
+        }
+    }
+
+    fn add_indent(ui: &Ui, current_indent: i32) {
+        if current_indent >= 0 {
+            ui.text("    ".repeat(current_indent as usize));
+            ui.same_line();
+        }
     }
 }

@@ -6,7 +6,14 @@ use crate::render::util::ui::UiElement;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-static POPUP_ID_COUNTER: Lazy<AtomicU64> = Lazy::new(|| AtomicU64::new(0));
+static POPUP_ID_COUNTER: Lazy<AtomicU64> = Lazy::new(|| {
+    AtomicU64::new(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs(),
+    )
+});
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Popup {
@@ -50,6 +57,7 @@ pub struct BasicData {
     pub title: String,
     pub description: Vec<Token>,
     pub notes: Vec<Token>,
+    pub acquisition: Vec<Token>,
     // tag href, tag name
     pub tags: BTreeMap<String, String>,
     pub pinned: bool,
@@ -59,17 +67,26 @@ pub struct BasicData {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct TagParams {
+    pub href: String,
+    pub text: String,
+    pub title: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Token {
     Text(String, Style),
-    // href, text, title
-    Tag(String, String, String),
+    Tag(TagParams),
+    Spacing,
     ListElement,
+    Indent(i32),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Style {
     Normal,
     Highlighted,
+    Disabled,
 }
 
 impl Default for BasicData {
@@ -79,6 +96,7 @@ impl Default for BasicData {
             title: "".to_string(),
             description: vec![],
             notes: vec![],
+            acquisition: vec![],
             tags: BTreeMap::new(),
             pinned: false,
             pos: None,

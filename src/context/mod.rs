@@ -12,6 +12,7 @@ pub struct Context {
     pub run_background_thread: bool,
     pub ui: UiContext,
     pub clipboard: CustomClipboard,
+    pub last_clipboard_text: Option<String>,
 }
 
 pub struct CustomClipboard {
@@ -27,6 +28,9 @@ impl Clone for CustomClipboard {
 }
 
 impl CustomClipboard {
+    pub fn set_text(&mut self, text: &str) -> Result<(), Error> {
+        self.clipboard.set_text(text)
+    }
     pub fn get_text(&mut self) -> Result<String, Error> {
         self.clipboard.get_text()
     }
@@ -44,6 +48,7 @@ impl Default for Context {
             clipboard: CustomClipboard {
                 clipboard: Clipboard::new().unwrap(),
             },
+            last_clipboard_text: None,
         }
     }
 }

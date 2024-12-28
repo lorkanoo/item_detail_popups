@@ -17,14 +17,33 @@ impl Addon {
                     Addon::lock().context.ui.hovered_popup = None;
                     await_cleared_clipboard();
 
-                    trigger_key_combination(&KeyCombination::shift_click());
-                    if !textbox_has_focus() {
-                        debug!("Could not process - could not link item to chat");
-                        Addon::lock().context.ui.loading = None;
-                        return;
-                    }
+                    let mut attempts = 0;
+                    let last_clipboard_text = Addon::lock().context.last_clipboard_text.clone();
 
-                    cut_all_and_close_chat();
+                    while attempts < 2 {
+                        trigger_key_combination(&KeyCombination::shift_click());
+                        if !textbox_has_focus() {
+                            debug!("Could not process - could not link item to chat");
+                            Addon::lock().context.ui.loading = None;
+                            return;
+                        }
+
+                        cut_all_and_close_chat();
+                        thread::sleep(Duration::from_millis(50));
+                        // Check if clipboard changed
+                        if let Ok(current_clipboard) = Addon::lock().context.clipboard.get_text() {
+                            if let Some(ref last_clipboard_text) = last_clipboard_text {
+                                if *last_clipboard_text != current_clipboard {
+                                    break;
+                                }
+                            } else {
+                                break;
+                            }
+                        }
+
+                        attempts += 1;
+                        thread::sleep(Duration::from_millis(50));
+                    }
                     process_clipboard_text();
 
                     if textbox_has_focus() {
@@ -51,32 +70,22 @@ impl Addon {
 }
 
 fn process_clipboard_text() {
-    let mut retries = 5;
-    while retries > 0 {
-        let clipboard_text = Addon::lock().context.clipboard.get_text();
-        let clipboard_retrieved = match clipboard_text {
-            Ok(clipboard_text) => {
-                let item_name = extract_item_name(&clipboard_text);
-                match item_name {
-                    Ok(item_name) => {
-                        Addon::lock().context.ui.hovered_popup =
-                            Some(prepare_item_popup(&item_name));
-                    }
-                    Err(e) => debug!("{}", e),
+    let clipboard_text = Addon::lock().context.clipboard.get_text();
+    match clipboard_text {
+        Ok(clipboard_text) => {
+            Addon::lock().context.last_clipboard_text = Some(clipboard_text.clone());
+            let item_name = extract_item_name(&clipboard_text);
+            match item_name {
+                Ok(item_name) => {
+                    Addon::lock().context.ui.hovered_popup = Some(prepare_item_popup(&item_name));
                 }
-                true
+                Err(e) => debug!("{}", e),
             }
-            Err(e) => {
-                warn!("Couldn't get clipboard text: {}", e);
-                false
-            }
-        };
-        if clipboard_retrieved {
-            break;
         }
-        thread::sleep(Duration::from_millis(100));
-        retries -= 1;
-    }
+        Err(e) => {
+            warn!("Couldn't get clipboard text: {}", e);
+        }
+    };
 }
 fn cut_all_and_close_chat() {
     trigger_key_combination(&KeyCombination::select_all());
