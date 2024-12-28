@@ -399,7 +399,7 @@ impl Addon {
                 Token::Tag(tag_params) => {
                     Self::render_tag(
                         ui,
-                        &tag_params,
+                        tag_params,
                         map_index,
                         ui_actions,
                         current_indent,
