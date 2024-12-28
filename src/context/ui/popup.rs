@@ -2,7 +2,7 @@ use chrono::{DateTime, Local};
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::render::util::ui::UiElement;
+use crate::render::util::ui::{Linkable, UiElement};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
@@ -21,49 +21,75 @@ pub struct Popup {
     #[serde(skip_deserializing)]
     pub id: u64,
     pub opened: bool,
-    pub basic_data: BasicData,
+    pub pinned: bool,
+    pub pos: Option<[f32; 2]>,
+    pub data: PopupData,
 }
 
 impl Popup {
-    pub fn new(basic_data: BasicData) -> Self {
+    pub fn new(data: PopupData) -> Self {
         let id = POPUP_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
         Self {
             id,
             opened: false,
-            basic_data,
+            pinned: false,
+            pos: None,
+            data,
         }
-    }
-    pub fn assign_id_and_clone(&self) -> Popup {
-        let id = POPUP_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
-        let mut clone = self.clone();
-        clone.id = id;
-        clone
     }
 }
 
 impl UiElement for Popup {
     fn rename(&mut self, new_name: String) {
-        self.basic_data.title = new_name;
+        self.data.title = new_name;
     }
 
     fn name(&self) -> &String {
-        &self.basic_data.title
+        &self.data.title
+    }
+
+    fn id(&self) -> &u64 {
+        &self.id
+    }
+
+    fn pos(&self) -> &Option<[f32; 2]> {
+        &self.pos
+    }
+}
+
+impl Linkable for Popup {
+    fn href(&self) -> &String {
+        &self.data.href
+    }
+
+    fn redirection_href(&self) -> &Option<String> {
+        &self.data.redirection_href
     }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct BasicData {
+pub struct PopupData {
     pub item_ids: Option<Vec<u32>>,
     pub title: String,
     pub description: Vec<Token>,
     pub notes: Vec<Token>,
     pub acquisition: Vec<Token>,
+    pub images: Vec<Token>,
     // tag href, tag name
     pub tags: BTreeMap<String, String>,
-    pub pinned: bool,
-    pub pos: Option<[f32; 2]>,
     pub cached_date: DateTime<Local>,
     pub href: String,
+    pub redirection_href: Option<String>,
+}
+
+impl PopupData {
+    pub fn is_not_empty(&self) -> bool {
+        !self.description.is_empty()
+            || !self.notes.is_empty()
+            || !self.acquisition.is_empty()
+            || !self.images.is_empty()
+            || self.item_ids.is_some()
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -80,6 +106,7 @@ pub enum Token {
     Spacing,
     ListElement,
     Indent(i32),
+    Image(String),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -89,7 +116,7 @@ pub enum Style {
     Disabled,
 }
 
-impl Default for BasicData {
+impl Default for PopupData {
     fn default() -> Self {
         Self {
             item_ids: None,
@@ -97,11 +124,11 @@ impl Default for BasicData {
             description: vec![],
             notes: vec![],
             acquisition: vec![],
+            images: vec![],
             tags: BTreeMap::new(),
-            pinned: false,
-            pos: None,
             cached_date: Local::now(),
             href: "".to_string(),
+            redirection_href: None,
         }
     }
 }

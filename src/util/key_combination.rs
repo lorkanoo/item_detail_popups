@@ -5,7 +5,7 @@ use enigo::{
     Direction::{Click, Press, Release},
     Enigo, Key, Keyboard, Mouse, Settings,
 };
-use function_name::named;
+
 use log::{debug, error};
 use serde::{Deserialize, Serialize};
 use std::fmt::Formatter;
@@ -27,33 +27,33 @@ impl KeyCombination {
         KeyCombination {
             left_click: true,
             shift: true,
-            ..Default::default()
+            ..KeyCombination::default()
         }
     }
     pub fn select_all() -> Self {
         KeyCombination {
             key: Some('a'),
             ctrl: true,
-            ..Default::default()
+            ..KeyCombination::default()
         }
     }
     pub fn cut() -> Self {
         KeyCombination {
             key: Some('x'),
             ctrl: true,
-            ..Default::default()
+            ..KeyCombination::default()
         }
     }
     pub fn enter() -> Self {
         KeyCombination {
             key_code: Some(13),
-            ..Default::default()
+            ..KeyCombination::default()
         }
     }
     pub fn backspace() -> Self {
         KeyCombination {
             key_code: Some(8),
-            ..Default::default()
+            ..KeyCombination::default()
         }
     }
 }
@@ -91,10 +91,10 @@ pub fn trigger_key_combination(key_combination: &KeyCombination) {
             break;
         }
         debug!("Waiting for all keys to release..");
-        if !Addon::lock().context.run_background_thread {
+        if !Addon::lock_context().run_background_thread {
             return;
         }
-        thread::sleep(Duration::from_millis(50));
+        thread::sleep(Duration::from_millis(20));
     }
 
     let mut keys = vec![];
@@ -125,25 +125,23 @@ pub fn trigger_key_combination(key_combination: &KeyCombination) {
         mouse_button_action(&mut enigo, button, Click);
     }
 
-    thread::sleep(Duration::from_millis(40));
+    thread::sleep(Duration::from_millis(20));
 
     for key in &keys {
         keyboard_key_action(&mut enigo, key, Release)
     }
 }
 
-#[named]
 fn mouse_button_action(enigo: &mut Enigo, button: &Button, action: Direction) {
     match enigo.button(*button, action) {
-        Ok(_) => debug!("[{}] Mouse press sent", function_name!()),
+        Ok(_) => debug!("[mouse_button_action] Mouse press sent"),
         Err(_) => error!("Could not send {:?} {:?}", button, action),
     }
 }
 
-#[named]
 fn keyboard_key_action(enigo: &mut Enigo, key: &Key, action: Direction) {
     match enigo.key(*key, action) {
-        Ok(_) => debug!("[{}] Keypress sent", function_name!()),
+        Ok(_) => debug!("[keyboard_key_action] Keypress sent"),
         Err(_) => error!("Could not send {:?} {:?}", key, action),
     }
 }

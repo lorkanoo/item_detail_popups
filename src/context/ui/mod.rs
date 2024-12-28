@@ -6,5 +6,5 @@ pub mod popup;
 pub struct UiContext {
     pub hovered_popup: Option<Popup>,
     pub pinned_popups: Vec<Popup>,
-    pub loading: Option<i16>,
+    pub loading_progress: Option<i16>,
 }

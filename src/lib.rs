@@ -1,11 +1,11 @@
 mod addon;
 mod api;
-pub mod cache;
 pub mod config;
 pub mod context;
 mod render;
 mod thread;
 pub mod util;
+pub mod cache;
 
 use crate::addon::Addon;
 use nexus::{AddonFlags, UpdateProvider};

@@ -28,4 +28,4 @@ To be added at 1.0.0 release
 ## Credits
 - to https://raidcore.gg/, for developing Nexus,
 - to [Zerthox](https://github.com/zerthox), for nexus and mumble rust bindings,
-- creator of https://github.com/droundy/singularize, for a creating simple singularize library.
+- creator of https://github.com/droundy/singularize, for creating a simple singularize library.
