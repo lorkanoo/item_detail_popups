@@ -461,15 +461,21 @@ impl Addon {
     ) {
         let href = tag_params.href.to_string();
         let title = tag_params.title.to_string();
-        Self::render_words(ui, &tag_params.text, current_indent, width_limit, |ui, word| {
-            ui.text_colored(LINK_COLOR, word);
-            if ui.is_item_clicked() && map_index.is_some() {
-                ui_actions.push(UiAction::Open(UiLink {
-                    title: title.clone(),
-                    href: href.clone(),
-                }));
-            }
-        });
+        Self::render_words(
+            ui,
+            &tag_params.text,
+            current_indent,
+            width_limit,
+            |ui, word| {
+                ui.text_colored(LINK_COLOR, word);
+                if ui.is_item_clicked() && map_index.is_some() {
+                    ui_actions.push(UiAction::Open(UiLink {
+                        title: title.clone(),
+                        href: href.clone(),
+                    }));
+                }
+            },
+        );
     }
 
     fn render_list_element(ui: &Ui, starts_with_list: &mut bool, current_indent: i32) {
