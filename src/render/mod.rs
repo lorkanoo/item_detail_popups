@@ -1,7 +1,7 @@
 use crate::addon::Addon;
 use crate::api::gw2_wiki::{href_to_wiki_url, prepare_href_popup};
 use crate::cache::Cache;
-use crate::context::ui::popup::{BasicData, Popup, Style, Token};
+use crate::context::ui::popup::{BasicData, Popup, Style, TagParams, Token};
 use crate::render::util::ui::extended::UiExtended;
 use crate::render::util::ui::{
     process_ui_actions_for_vec, UiAction, COPPER_COLOR, GOLD_COLOR, LINK_COLOR, SILVER_COLOR,
@@ -399,9 +399,7 @@ impl Addon {
                 Token::Tag(tag_params) => {
                     Self::render_tag(
                         ui,
-                        &tag_params.href,
-                        &tag_params.text,
-                        &tag_params.title,
+                        &tag_params,
                         map_index,
                         ui_actions,
                         current_indent,
@@ -455,17 +453,15 @@ impl Addon {
 
     fn render_tag(
         ui: &Ui,
-        href: &str,
-        text: &str,
-        title: &str,
+        tag_params: &TagParams,
         map_index: Option<usize>,
         ui_actions: &mut Vec<UiAction>,
         current_indent: i32,
         width_limit: f32,
     ) {
-        let href = href.to_string();
-        let title = title.to_string();
-        Self::render_words(ui, text, current_indent, width_limit, |ui, word| {
+        let href = tag_params.href.to_string();
+        let title = tag_params.title.to_string();
+        Self::render_words(ui, &tag_params.text, current_indent, width_limit, |ui, word| {
             ui.text_colored(LINK_COLOR, word);
             if ui.is_item_clicked() && map_index.is_some() {
                 ui_actions.push(UiAction::Open(UiLink {
