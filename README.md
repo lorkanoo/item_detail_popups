@@ -2,14 +2,15 @@
 Item detail popups for Nexus (Guild Wars 2 addon manager).
 
 ## Features
-- Get information from wikipedia
-- Cache popups to improve speed and reduce data usage
-- POE2-inspired, interactable popup system
+- Get information from wikipedia about item description, notes, acquisition and more.
+- Preview decorations from crafting window.
+- Quickly check prices of items on the trading post.
+- POE2-inspired, interactable popup system which allows browsing subsequent wiki pages for information.
+- Designed for speed, with caching mechanisms to improve speed and reduce data usage.
 
 ## Roadmap
-- Trading post prices, 
-- more information from wiki, 
-- manually enter item name to search wiki for items that do not have chat links.
+- more information from wiki,
+- manually enter item name to search wiki for items that do not have chat links
 
 ## Disclaimer
 This addon uses **macros** (virtual key-presses) to get item chat link from chatbox. Refer to [macro policy](https://help.guildwars2.com/hc/en-us/articles/360013762153-Policy-Macros-and-Macro-Use) for more details about macro usage.
