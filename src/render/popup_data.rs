@@ -268,9 +268,9 @@ impl Context {
     ) {
         let style = ui.push_style_var(nexus::imgui::StyleVar::ItemSpacing([0.0, 5.0]));
         ui.spacing();
-        let mut starts_with_list = tokens.first().is_some_and(|t| {
-            matches!(t, Token::ListElement) || matches!(t, Token::Indent(_))
-        });
+        let mut starts_with_list = tokens
+            .first()
+            .is_some_and(|t| matches!(t, Token::ListElement) || matches!(t, Token::Indent(_)));
         let mut current_indent = -1;
         for token in tokens {
             match token {
