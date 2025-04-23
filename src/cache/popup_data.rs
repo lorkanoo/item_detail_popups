@@ -2,12 +2,12 @@ use crate::addon::Addon;
 use crate::config::config_dir;
 use crate::context::ui::popup::PopupData;
 
+use super::{is_cache_expired, Cacheable, Persistent};
 use indexmap::IndexMap;
 use log::{debug, info, warn};
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
 use std::path::PathBuf;
-use super::{is_cache_expired, Cacheable, Persistent};
 
 pub type PopupDataCache = IndexMap<String, PopupData>;
 

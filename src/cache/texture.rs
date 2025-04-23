@@ -1,3 +1,5 @@
+use super::is_cache_expired;
+use super::Cacheable;
 use crate::addon::Addon;
 use crate::api::gw2_wiki::download_wiki_image;
 use crate::cache::{CachedData, CachingStatus};
@@ -6,10 +8,8 @@ use chrono::Local;
 use log::{debug, error};
 use nexus::texture::{load_texture_from_file, RawTextureReceiveCallback, Texture};
 use nexus::texture_receive;
-use std::thread;
-use super::Cacheable;
-use super::is_cache_expired;
 use std::collections::HashMap;
+use std::thread;
 
 pub const RECEIVE_TEXTURE: RawTextureReceiveCallback = texture_receive!(receive_texture);
 pub const TEXTURE_PREFIX: &str = "ITEM_DETAIL_POPUPS_URL_";
@@ -23,7 +23,12 @@ impl<'a> Cacheable<'a, TextureCache, CachedData<Texture>, String> for TextureCac
             Some(texture_cached_data) => {
                 let cache_expiration_duration = Addon::lock_config().texture_expiration_duration;
                 let mut result = texture_cached_data.clone();
-                if is_cache_expired(cache_expiration_duration, texture_cached_data.date) && !matches!(&texture_cached_data.caching_status, CachingStatus::InProgress) {
+                if is_cache_expired(cache_expiration_duration, texture_cached_data.date)
+                    && !matches!(
+                        &texture_cached_data.caching_status,
+                        CachingStatus::InProgress
+                    )
+                {
                     result = CachedData::new(Local::now());
                     self.insert(texture_id_with_prefix, result.clone());
                     should_start_caching = true;
@@ -76,6 +81,7 @@ pub fn receive_texture(id: &str, texture: Option<&Texture>) {
     }
     Addon::lock_cache().textures.insert(
         id.to_string(),
-        CachedData::new_with_value(Local::now(), texture.unwrap().clone()).with_caching_status(CachingStatus::Cached),
-    );  
+        CachedData::new_with_value(Local::now(), texture.unwrap().clone())
+            .with_caching_status(CachingStatus::Cached),
+    );
 }

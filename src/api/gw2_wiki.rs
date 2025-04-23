@@ -317,7 +317,6 @@ fn fill_images(document: &Html, popup: &mut Popup) {
                 }
             }
         }
-
     }
     popup.data.images = images;
 }

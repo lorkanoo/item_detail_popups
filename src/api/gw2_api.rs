@@ -48,8 +48,9 @@ pub fn fetch_prices_thread(prices_to_cache: HashMap<u32, CachedData<Price>>) {
                                 highest_buy: price_data.buys.unit_price,
                                 lowest_sell: price_data.sells.unit_price,
                             };
-                            let new_cached_price = CachedData::new_with_value(Local::now(), new_price)
-                                .with_caching_status(Cached);
+                            let new_cached_price =
+                                CachedData::new_with_value(Local::now(), new_price)
+                                    .with_caching_status(Cached);
 
                             Addon::lock_cache()
                                 .prices

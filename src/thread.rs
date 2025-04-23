@@ -3,10 +3,10 @@ use crate::api::gw2_wiki::{prepare_href_popup, prepare_item_popup};
 use crate::cache::{is_cache_expired, Cacheable};
 use crate::config::textures_dir;
 
-use log::{info, debug, error};
-use std::{fs, thread};
+use crate::render::popup_data::{COPPER_COIN_HREF, GOLD_COIN_HREF, SILVER_COIN_HREF};
+use log::{debug, error, info};
 use std::time::Duration;
-use crate::render::popup_data::{GOLD_COIN_HREF, SILVER_COIN_HREF, COPPER_COIN_HREF};
+use std::{fs, thread};
 
 const MAIN_THREAD_SLEEP_DURATION_MS: u64 = 500;
 const GC_THREAD_SLEEP_DURATION_SEC: u64 = 120;
@@ -35,12 +35,17 @@ pub fn main_background_thread() {
 
 pub fn preloader_thread() {
     Addon::lock_threads().push(thread::spawn(|| {
-        Addon::lock_cache().textures.retrieve(GOLD_COIN_HREF.to_string());
-        Addon::lock_cache().textures.retrieve(SILVER_COIN_HREF.to_string());
-        Addon::lock_cache().textures.retrieve(COPPER_COIN_HREF.to_string());
+        Addon::lock_cache()
+            .textures
+            .retrieve(GOLD_COIN_HREF.to_string());
+        Addon::lock_cache()
+            .textures
+            .retrieve(SILVER_COIN_HREF.to_string());
+        Addon::lock_cache()
+            .textures
+            .retrieve(COPPER_COIN_HREF.to_string());
     }));
 }
-
 
 pub fn gc_thread() {
     Addon::lock_threads().push(thread::spawn(|| loop {
@@ -76,7 +81,8 @@ fn clean_finished_threads() {
 
 fn clean_expired_cache() {
     let mut cache = Addon::lock_cache();
-    let popup_data_cache_expiration_duration = Addon::lock_config().max_popup_data_cache_expiration_duration;
+    let popup_data_cache_expiration_duration =
+        Addon::lock_config().max_popup_data_cache_expiration_duration;
     cache.popup_data_map.retain(|_, popup_data| {
         !is_cache_expired(popup_data_cache_expiration_duration, popup_data.cached_date)
     });
@@ -106,7 +112,7 @@ fn clean_expired_textures() {
         if metadata.is_err() {
             error!("[clean_expired_textures] Couldn't extract metadata");
             continue;
-        } 
+        }
         let metadata = metadata.unwrap();
         if let Ok(created) = metadata.created() {
             if is_cache_expired(texture_expiration_duration, created.into()) {
@@ -115,5 +121,8 @@ fn clean_expired_textures() {
             }
         }
     }
-    info!("[clean_expired_textures] Removed {} textures", removed_count);
+    info!(
+        "[clean_expired_textures] Removed {} textures",
+        removed_count
+    );
 }

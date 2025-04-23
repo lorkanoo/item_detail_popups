@@ -1,6 +1,7 @@
 use crate::addon::Addon;
 use crate::api::gw2_wiki::href_to_wiki_url;
 use crate::cache::Cacheable;
+use crate::cache::CachingStatus;
 use crate::context::ui::popup::{Popup, Style, TagParams, Token};
 use crate::context::Context;
 use crate::render::util::ui::{
@@ -9,7 +10,6 @@ use crate::render::util::ui::{
 use nexus::imgui::{sys, ChildWindow, MouseButton, Ui};
 use std::ptr;
 use util::ui::UiLink;
-use crate::cache::CachingStatus;
 
 use super::util;
 
@@ -136,57 +136,71 @@ impl Context {
         }
     }
 
-    fn render_images_tab(
-        ui: &Ui<'_>,
-        popup: &mut Popup
-    ) {
+    fn render_images_tab(ui: &Ui<'_>, popup: &mut Popup) {
         if popup.data.images.is_empty() {
-            return
+            return;
         }
-        if let Some(_token) = ui.tab_item(format!("Images##rps{}", popup.id)) {            
+        if let Some(_token) = ui.tab_item(format!("Images##rps{}", popup.id)) {
             let render_func = || {
                 for token in &popup.data.images {
                     match token {
                         Token::Image(href) => {
-                            let cached_data_opt = Addon::lock_cache().textures.retrieve(href.to_string());
+                            let cached_data_opt =
+                                Addon::lock_cache().textures.retrieve(href.to_string());
                             if let Some(cached_data) = cached_data_opt {
                                 if let CachingStatus::Cached = cached_data.caching_status {
                                     if let Some(texture) = cached_data.value() {
                                         let window_width = ui.window_size()[0];
-                                        let start_offset = window_width / 2.0 - texture.width as f32 / 2.0; 
+                                        let start_offset =
+                                            window_width / 2.0 - texture.width as f32 / 2.0;
                                         ui.set_cursor_pos([start_offset, ui.cursor_pos()[1]]);
-                                        ui.invisible_button(href, [texture.width as f32, texture.height as f32]);
+                                        ui.invisible_button(
+                                            href,
+                                            [texture.width as f32, texture.height as f32],
+                                        );
                                         ui.get_window_draw_list()
-                                            .add_image(texture.id(), ui.item_rect_min(), ui.item_rect_max())
+                                            .add_image(
+                                                texture.id(),
+                                                ui.item_rect_min(),
+                                                ui.item_rect_max(),
+                                            )
                                             .build();
                                         ui.spacing();
                                     }
                                 }
-                            }  
-                        },
+                            }
+                        }
                         Token::Text(text, _) => {
                             let words: Vec<&str> = text.split_whitespace().collect();
                             for chunk in words.chunks(4) {
                                 let text = chunk.join(" ");
                                 let text_size = ui.calc_text_size(&text)[0];
                                 let window_width = ui.window_size()[0];
-                                ui.set_cursor_pos([window_width / 2.0 - text_size / 2.0, ui.cursor_pos()[1]]);
+                                ui.set_cursor_pos([
+                                    window_width / 2.0 - text_size / 2.0,
+                                    ui.cursor_pos()[1],
+                                ]);
                                 ui.text(text);
                             }
                             ui.spacing();
-                        },
+                        }
                         _ => {}
                     }
                 }
                 ui.new_line();
             };
 
-            let count = popup.data.images.iter().filter(|item| matches!(item, Token::Image(_))).count();
+            let count = popup
+                .data
+                .images
+                .iter()
+                .filter(|item| matches!(item, Token::Image(_)))
+                .count();
             if count <= 1 {
                 render_func();
                 return;
             }
-            
+
             let screen_height = ui.io().display_size[1];
             Self::next_window_size_constraints(
                 [100.0, screen_height * 0.05],
@@ -197,7 +211,6 @@ impl Context {
                 .scroll_bar(true)
                 .build(ui, render_func);
         }
-
     }
 
     pub fn next_window_size_constraints(size_min: [f32; 2], size_max: [f32; 2]) {
@@ -308,12 +321,13 @@ impl Context {
             if word.is_empty() {
                 continue;
             }
-            let final_word = if word.starts_with(".") || word.starts_with(",") || word.starts_with(":")  {
-                ui.same_line();
-                word.to_string()
-            } else {
-                format!(" {}", word)
-            };
+            let final_word =
+                if word.starts_with(".") || word.starts_with(",") || word.starts_with(":") {
+                    ui.same_line();
+                    word.to_string()
+                } else {
+                    format!(" {}", word)
+                };
             render_word(ui, final_word.as_str());
             ui.same_line();
             Self::handle_line_wrap(ui, current_indent, width_limit);
@@ -326,12 +340,10 @@ impl Context {
             text,
             current_indent,
             width_limit,
-            |ui, word| {
-                match style {
-                    Style::Normal => ui.text(word),
-                    Style::Highlighted => ui.text_colored(SUCCESS_COLOR, word),
-                    Style::Disabled => ui.text_disabled(word),
-                }
+            |ui, word| match style {
+                Style::Normal => ui.text(word),
+                Style::Highlighted => ui.text_colored(SUCCESS_COLOR, word),
+                Style::Disabled => ui.text_disabled(word),
             },
         );
     }
@@ -473,7 +485,7 @@ impl Context {
                 if *cursor_pos.first().unwrap() > width_limit {
                     ui.new_line();
                 }
-           }
+            }
             ui.new_line();
         }
     }

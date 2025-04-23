@@ -22,7 +22,7 @@ pub struct Config {
     pub max_popup_data_cache_expiration_duration: Duration,
     pub texture_expiration_duration: Duration,
     #[serde(default = "default_price_expiration")]
-    pub price_expiration_duration: Duration, 
+    pub price_expiration_duration: Duration,
 }
 
 impl Persistent for Config {
@@ -31,8 +31,7 @@ impl Persistent for Config {
         let file_opt = File::open(&path)
             .inspect_err(|err| log::warn!("Failed to read config: {err}"))
             .ok();
-        if file_opt.is_none()
-        {
+        if file_opt.is_none() {
             warn!("[load] Failed to load config from \"{}\"", path.display());
             return;
         }

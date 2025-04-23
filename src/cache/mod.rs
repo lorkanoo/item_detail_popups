@@ -6,10 +6,10 @@ pub mod texture;
 use chrono::{DateTime, Local};
 use item_name::ItemNamesCache;
 use popup_data::PopupDataCache;
-use texture::TextureCache;
 use price::PriceCache;
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, time::Duration};
+use texture::TextureCache;
 
 #[derive(Clone, Serialize, Deserialize, Default)]
 pub struct Cache {
