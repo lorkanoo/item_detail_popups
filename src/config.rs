@@ -10,9 +10,9 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 const DEFAULT_POPUP_DATA_CACHE_EXPIRATION_SECS: u64 = 36 * 3600;
-const DEFAULT_MAX_POPUP_DATA_CACHE_ELEMENTS: usize = 200;
+const DEFAULT_MAX_POPUP_DATA_CACHE_ELEMENTS: usize = 300;
 const DEFAULT_PRICE_EXPIRATION_DURATION: Duration = Duration::from_secs(60);
-const DEFAULT_TEXTURE_EXPIRATION_DURATION: Duration = Duration::from_secs(1 * 24 * 60 * 60);
+const DEFAULT_TEXTURE_EXPIRATION_DURATION: Duration = Duration::from_secs(7 * 24 * 60 * 60);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
