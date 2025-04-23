@@ -70,7 +70,7 @@ impl<'a> Cacheable<'a, PopupDataCache, PopupData, &'a String, &'a mut PopupData>
 
         let cached_data = self.swap_remove_entry(key);
         if let Some((_, mut cached_data)) = cached_data {
-            let cache_expiration = Addon::lock_config().max_popup_data_cache_expiration_duration.clone();
+            let cache_expiration = Addon::lock_config().max_popup_data_cache_expiration_duration;
             if !is_cache_expired(cache_expiration, cached_data.cached_date) {
                 PopupDataCache::store(self, key, &mut cached_data);
                 return Some(cached_data);
@@ -80,7 +80,7 @@ impl<'a> Cacheable<'a, PopupDataCache, PopupData, &'a String, &'a mut PopupData>
     }
 
     fn store(&'a mut self, key: &'a String, value: &'a mut PopupData) {
-        let max_popup_data_cache_size = Addon::lock_config().max_popup_data_cache_elements.clone();
+        let max_popup_data_cache_size = Addon::lock_config().max_popup_data_cache_elements;
         while self.len() >= max_popup_data_cache_size {
             if self.shift_remove_index(0).is_none() {
                 break;

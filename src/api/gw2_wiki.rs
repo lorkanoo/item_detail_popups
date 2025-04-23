@@ -49,7 +49,7 @@ pub fn prepare_item_popup(item_name: &str) -> Popup {
 }
 
 pub fn download_wiki_image(href: &String) -> Result<(), ureq::Error> {
-    let path = href_to_wiki_url(&href);
+    let path = href_to_wiki_url(href);
     debug!("[download_wiki_image] Downloading image from: {}", path);
     match get_sync(path) {
         Ok(response) => {
@@ -296,8 +296,8 @@ fn fill_notes(document: &Html, popup: &mut Popup) {
 fn fill_images(document: &Html, popup: &mut Popup) {
     let images_start_selector = Selector::parse(".infobox table img").unwrap();
     let mut images: Vec<Token> = vec![];
-    let mut img_elements = document.select(&images_start_selector);
-    while let Some(img) = img_elements.next() {
+    let img_elements = document.select(&images_start_selector);
+    for img in img_elements {
         let href = img.attr("src");
         if href.is_none() {
             continue;

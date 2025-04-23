@@ -9,9 +9,7 @@ use popup_data::PopupDataCache;
 use texture::TextureCache;
 use price::PriceCache;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, path::PathBuf, time::Duration};
-use nexus::texture::Texture;
-use log::info;
+use std::{path::PathBuf, time::Duration};
 
 #[derive(Clone, Serialize, Deserialize, Default)]
 pub struct Cache {

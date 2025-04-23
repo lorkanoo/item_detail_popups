@@ -76,14 +76,14 @@ fn clean_finished_threads() {
 
 fn clean_expired_cache() {
     let mut cache = Addon::lock_cache();
-    let popup_data_cache_expiration_duration = Addon::lock_config().max_popup_data_cache_expiration_duration.clone();
+    let popup_data_cache_expiration_duration = Addon::lock_config().max_popup_data_cache_expiration_duration;
     cache.popup_data_map.retain(|_, popup_data| {
         !is_cache_expired(popup_data_cache_expiration_duration, popup_data.cached_date)
     });
 }
 
 fn clean_expired_textures() {
-    let texture_expiration_duration = Addon::lock_config().texture_expiration_duration.clone();
+    let texture_expiration_duration = Addon::lock_config().texture_expiration_duration;
     let entries = fs::read_dir(textures_dir());
     if entries.is_err() {
         error!("[clean_expired_textures] Couldn't clean expired textures");

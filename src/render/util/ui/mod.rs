@@ -68,7 +68,7 @@ pub fn process_ui_actions_for_vec<T: UiElement + Clone + Linkable>(
                     if let Some(href) = t.redirection_href() {
                         Addon::lock_cache().popup_data_map.swap_remove(href);
                     }
-                    refresh_popup_thread(t.id().clone(), t.name().clone(), t.pos().clone());
+                    refresh_popup_thread(*t.id(), t.name().clone(), *t.pos());
                     vec.remove(*i);
                 }
             }

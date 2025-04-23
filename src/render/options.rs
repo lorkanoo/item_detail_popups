@@ -59,7 +59,7 @@ impl Context {
     fn render_max_cached_popup_data_elements(&mut self, ui: &Ui<'_>) {
         debug!("[render_max_cached_popup_data_elements] Started.");
         let max_popup_data_cache_elements =
-            Addon::lock_config().max_popup_data_cache_elements.clone();
+            Addon::lock_config().max_popup_data_cache_elements;
         if let Ok(mut new) = i32::try_from(max_popup_data_cache_elements) {
             ui.input_int("Max cached popups", &mut new)
                 .step(1 as _)

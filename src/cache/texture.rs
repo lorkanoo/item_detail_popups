@@ -21,7 +21,7 @@ impl<'a> Cacheable<'a, TextureCache, CachedData<Texture>, String> for TextureCac
         let mut should_start_caching = false;
         let result = match self.get(&texture_id_with_prefix) {
             Some(texture_cached_data) => {
-                let cache_expiration_duration = Addon::lock_config().texture_expiration_duration.clone();
+                let cache_expiration_duration = Addon::lock_config().texture_expiration_duration;
                 let mut result = texture_cached_data.clone();
                 if is_cache_expired(cache_expiration_duration, texture_cached_data.date) && !matches!(&texture_cached_data.caching_status, CachingStatus::InProgress) {
                     result = CachedData::new(Local::now());
@@ -56,12 +56,9 @@ pub fn fetch_texture_thread(texture_id: String) {
                 "[fetch_texture_thread] File does not exist, downloading: {}",
                 path.display()
             );
-            match download_wiki_image(&texture_id) {
-                Err(e) => {
-                    error!("[fetch_texture_thread] failed to download image: {}", e);
-                    return;
-                }
-                _ => {}
+            if let Err(e) = download_wiki_image(&texture_id) {
+                error!("[fetch_texture_thread] failed to download image: {}", e);
+                return;
             }
         }
         let texture_id_with_prefix = format!("{}{}", TEXTURE_PREFIX, texture_id);

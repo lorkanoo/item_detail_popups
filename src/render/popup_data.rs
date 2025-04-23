@@ -151,28 +151,29 @@ impl Context {
                         Token::Image(href) => {
                             let cached_data_opt = Addon::lock_cache().textures.retrieve(href.to_string());
                             if let Some(cached_data) = cached_data_opt {
-                                match cached_data.caching_status {
-                                    CachingStatus::Cached => {
-                                        if let Some(texture) = cached_data.value() {
-                                            let window_width = ui.window_size()[0];
-                                            let start_offset = window_width / 2.0 - texture.width as f32 / 2.0; 
-                                            ui.set_cursor_pos([start_offset, ui.cursor_pos()[1]]);
-                                            ui.invisible_button(href, [texture.width as f32, texture.height as f32]);
-                                            ui.get_window_draw_list()
-                                                .add_image(texture.id(), ui.item_rect_min(), ui.item_rect_max())
-                                                .build();
-                                            ui.spacing();
-                                        }
+                                if let CachingStatus::Cached = cached_data.caching_status {
+                                    if let Some(texture) = cached_data.value() {
+                                        let window_width = ui.window_size()[0];
+                                        let start_offset = window_width / 2.0 - texture.width as f32 / 2.0; 
+                                        ui.set_cursor_pos([start_offset, ui.cursor_pos()[1]]);
+                                        ui.invisible_button(href, [texture.width as f32, texture.height as f32]);
+                                        ui.get_window_draw_list()
+                                            .add_image(texture.id(), ui.item_rect_min(), ui.item_rect_max())
+                                            .build();
+                                        ui.spacing();
                                     }
-                                    _ => {}
                                 }
                             }  
                         },
                         Token::Text(text, _) => {
-                            let text_size = ui.calc_text_size(text)[0];
-                            let window_width = ui.window_size()[0];
-                            ui.set_cursor_pos([window_width / 2.0 - text_size / 2.0, ui.cursor_pos()[1]]);
-                            ui.text(text);
+                            let words: Vec<&str> = text.split_whitespace().collect();
+                            for chunk in words.chunks(4) {
+                                let text = chunk.join(" ");
+                                let text_size = ui.calc_text_size(&text)[0];
+                                let window_width = ui.window_size()[0];
+                                ui.set_cursor_pos([window_width / 2.0 - text_size / 2.0, ui.cursor_pos()[1]]);
+                                ui.text(text);
+                            }
                             ui.spacing();
                         },
                         _ => {}
@@ -182,7 +183,7 @@ impl Context {
             };
 
             let count = popup.data.images.iter().filter(|item| matches!(item, Token::Image(_))).count();
-            if (count <= 1) {
+            if count <= 1 {
                 render_func();
                 return;
             }
@@ -339,16 +340,13 @@ impl Context {
     fn render_image(ui: &Ui, href: &str) {
         let cached_data_opt = Addon::lock_cache().textures.retrieve(href.to_string());
         if let Some(cached_data) = cached_data_opt {
-            match cached_data.caching_status {
-                CachingStatus::Cached => {
-                    if let Some(texture) = cached_data.value() {
-                        ui.invisible_button(href, [texture.width as f32, texture.height as f32]);
-                        ui.get_window_draw_list()
-                            .add_image(texture.id(), ui.item_rect_min(), ui.item_rect_max())
-                            .build();
-                    }
+            if let CachingStatus::Cached = cached_data.caching_status {
+                if let Some(texture) = cached_data.value() {
+                    ui.invisible_button(href, [texture.width as f32, texture.height as f32]);
+                    ui.get_window_draw_list()
+                        .add_image(texture.id(), ui.item_rect_min(), ui.item_rect_max())
+                        .build();
                 }
-                _ => {}
             }
         }
     }
@@ -443,7 +441,7 @@ impl Context {
                     .redirection_href
                     .as_ref()
                     .unwrap_or(&popup.data.href);
-                if let Err(err) = open::that_detached(href_to_wiki_url(&href)) {
+                if let Err(err) = open::that_detached(href_to_wiki_url(href)) {
                     log::error!("Failed to open wiki url: {err}");
                 }
             }
