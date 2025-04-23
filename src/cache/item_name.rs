@@ -66,6 +66,6 @@ impl<'a> Cacheable<'a, CachedData<ItemNamesCache>, &'a ItemNamesCache>
     for CachedData<ItemNamesCache>
 {
     fn retrieve(&'a mut self, _key: ()) -> Option<&'a ItemNamesCache> {
-        return self.value();
+        self.value()
     }
 }

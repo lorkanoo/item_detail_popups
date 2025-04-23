@@ -48,6 +48,7 @@ pub fn prepare_item_popup(item_name: &str) -> Popup {
     popup
 }
 
+#[allow(clippy::result_large_err)]
 pub fn download_wiki_image(href: &String) -> Result<(), ureq::Error> {
     let path = href_to_wiki_url(href);
     debug!("[download_wiki_image] Downloading image from: {}", path);
