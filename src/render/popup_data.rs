@@ -37,7 +37,7 @@ impl Context {
                 Self::render_general_tab(ui, popup, ui_actions, width_limit);
                 Self::render_acquisition_tab(ui, popup, ui_actions, width_limit);
                 Self::render_notes_tab(ui, popup, ui_actions, width_limit);
-                Self::render_images_tab(ui, popup, ui_actions);
+                Self::render_images_tab(ui, popup);
             }
         }
         Self::render_button_ribbon(ui, pinned_popup_vec_index, popup, ui_actions);
@@ -138,8 +138,7 @@ impl Context {
 
     fn render_images_tab(
         ui: &Ui<'_>,
-        popup: &mut Popup,
-        ui_actions: &mut Vec<UiAction>
+        popup: &mut Popup
     ) {
         if popup.data.images.is_empty() {
             return

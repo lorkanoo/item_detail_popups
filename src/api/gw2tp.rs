@@ -32,7 +32,7 @@ pub fn fetch_item_names_thread() {
         }
 
         let response = get_sync(items_name_path());
-        if let Err(_) = response {
+        if response.is_err() {
             warn!("[get_sync] could not fetch item names");
             return;
         }

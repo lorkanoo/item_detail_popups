@@ -66,7 +66,7 @@ pub fn fetch_texture_thread(texture_id: String) {
     }));
 }
 
-pub fn identifier_to_filename(identifier: &String) -> String {
+pub fn identifier_to_filename(identifier: &str) -> String {
     identifier.replace("/", "_").replace("\\", "_")
 }
 

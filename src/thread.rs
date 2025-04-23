@@ -110,7 +110,7 @@ fn clean_expired_textures() {
         let metadata = metadata.unwrap();
         if let Ok(created) = metadata.created() {
             if is_cache_expired(texture_expiration_duration, created.into()) {
-                fs::remove_file(path);
+                let _ = fs::remove_file(path);
                 removed_count += 1;
             }
         }
