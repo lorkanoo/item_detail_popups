@@ -6,7 +6,7 @@ use singularize::singularize_item_name;
 
 pub fn is_in_game() -> bool {
     let mut is_gameplay = false;
-    if let Some(nexus) = unsafe { Addon::lock_context().links.nexus() } {
+    if let Some(nexus) = unsafe { Addon::read_context().links.nexus() } {
         if nexus.is_gameplay {
             is_gameplay = true;
         }

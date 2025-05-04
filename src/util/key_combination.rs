@@ -6,7 +6,7 @@ use enigo::{
     Enigo, Key, Keyboard, Mouse, Settings,
 };
 
-use log::{debug, error};
+use log::{debug, error, warn};
 use serde::{Deserialize, Serialize};
 use std::fmt::Formatter;
 use std::time::Duration;
@@ -81,20 +81,25 @@ impl fmt::Display for KeyCombination {
 fn all_keys_released() -> bool {
     let device_state = DeviceState::new();
     let keys = device_state.get_keys();
+    debug!("[all_keys_released]: not released keys: {keys:?}");
     keys.is_empty()
 }
 
 pub fn trigger_key_combination(key_combination: &KeyCombination) {
+    debug!("[trigger_key_combination] combination: {key_combination:?}");
     let mut enigo = Enigo::new(&Settings::default()).unwrap();
-    loop {
+    let mut retries = 75;
+    let should_wait_for_key_release = Addon::read_config().wait_until_all_keys_released.clone();
+    while should_wait_for_key_release && retries > 0 {
         if all_keys_released() {
             break;
         }
-        debug!("Waiting for all keys to release..");
-        if !Addon::lock_context().run_background_thread {
+        debug!("[trigger_key_combination] Waiting for all keys to release ({retries})");
+        if !Addon::read_context().run_background_thread {
             return;
         }
         thread::sleep(Duration::from_millis(20));
+        retries -= 1;
     }
 
     let mut keys = vec![];
@@ -134,14 +139,14 @@ pub fn trigger_key_combination(key_combination: &KeyCombination) {
 
 fn mouse_button_action(enigo: &mut Enigo, button: &Button, action: Direction) {
     match enigo.button(*button, action) {
-        Ok(_) => debug!("[mouse_button_action] Mouse press sent"),
-        Err(_) => error!("Could not send {:?} {:?}", button, action),
+        Ok(_) => debug!("[mouse_button_action] Mouse press sent: {:?}", button),
+        Err(e) => error!("Could not send {:?} {:?} {}", button, action, e),
     }
 }
 
 fn keyboard_key_action(enigo: &mut Enigo, key: &Key, action: Direction) {
     match enigo.key(*key, action) {
-        Ok(_) => debug!("[keyboard_key_action] Keypress sent"),
-        Err(_) => error!("Could not send {:?} {:?}", key, action),
+        Ok(_) => debug!("[keyboard_key_action] Keypress sent: {:?}", key),
+        Err(e) => error!("Could not send {:?} {:?} {}", key, action, e),
     }
 }

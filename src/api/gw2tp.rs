@@ -4,7 +4,7 @@ use chrono::Local;
 
 use crate::cache::CachingStatus::Cached;
 use crate::cache::{is_cache_expired, CachedData};
-use log::{debug, info, warn};
+use log::{debug, info, warn, error};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::thread;
@@ -25,21 +25,21 @@ fn items_name_path() -> String {
 pub fn fetch_item_names_thread() {
     Addon::lock_threads().push(thread::spawn(|| {
         debug!("[fetch_item_names_thread] started");
-        let date = Addon::lock_cache().item_names.date();
+        let date = Addon::read_context().cache.item_names.date();
         if !is_cache_expired(ITEM_NAMES_CACHE_EXPIRATION, date) {
             info!("[fetch_item_names_thread] cache is up to date");
             return;
         }
 
         let response = get_sync(items_name_path());
-        if response.is_err() {
-            warn!("[get_sync] could not fetch item names");
+        if let Err(e) = response {
+            error!("[get_sync] could not fetch item names: {}", e);
             return;
         }
         let response = response.unwrap();
         let json = response.into_json();
         if let Err(e) = json {
-            warn!("[get_sync] failed to fetch json: {}", e);
+            error!("[get_sync] failed to fetch json: {}", e);
             return;
         }
 
@@ -53,7 +53,7 @@ pub fn fetch_item_names_thread() {
                     map
                 });
 
-        Addon::lock_cache().item_names =
+        Addon::write_context().cache.item_names =
             CachedData::new_with_value(Local::now(), map_hashmap).with_caching_status(Cached);
     }));
 }

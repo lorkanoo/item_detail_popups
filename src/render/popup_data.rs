@@ -1,18 +1,21 @@
 use crate::addon::Addon;
 use crate::api::gw2_wiki::href_to_wiki_url;
+use crate::cache;
+use crate::cache::Cache;
 use crate::cache::Cacheable;
 use crate::cache::CachingStatus;
 use crate::context::ui::popup::{Popup, Style, TagParams, Token};
 use crate::context::Context;
 use crate::render::util::ui::{
-    UiAction, COPPER_COLOR, GOLD_COLOR, LINK_COLOR, SILVER_COLOR, SUCCESS_COLOR,
+    UiAction, COPPER_COLOR, GOLD_COLOR, SILVER_COLOR, HIGHLIGHT_COLOR,
 };
+use nexus::imgui::MenuItem;
 use nexus::imgui::{sys, ChildWindow, MouseButton, Ui};
 use std::ptr;
 use util::ui::UiLink;
 
 use super::util;
-
+use std::thread;
 pub const GOLD_COIN_HREF: &str = "/images/thumb/d/d1/Gold_coin.png/18px-Gold_coin.png";
 pub const SILVER_COIN_HREF: &str = "/images/thumb/3/3c/Silver_coin.png/18px-Silver_coin.png";
 pub const COPPER_COIN_HREF: &str = "/images/thumb/e/eb/Copper_coin.png/18px-Copper_coin.png";
@@ -26,18 +29,21 @@ impl Context {
         popup: &mut Popup,
         ui_actions: &mut Vec<UiAction>,
         width_limit: f32,
+        cache: &mut Cache
     ) {
         if !popup.pinned {
             ui.text(&popup.data.title);
             ui.spacing();
         }
-        Self::render_tag_bar(ui, popup, ui_actions, width_limit);
+        if Addon::read_config().show_tag_bar {
+            Self::render_tag_bar(ui, popup, ui_actions, width_limit);
+        }
         if popup.data.is_not_empty() {
             if let Some(_token) = ui.tab_bar(format!("tabs##rps{}", popup.id)) {
-                Self::render_general_tab(ui, popup, ui_actions, width_limit);
-                Self::render_acquisition_tab(ui, popup, ui_actions, width_limit);
-                Self::render_notes_tab(ui, popup, ui_actions, width_limit);
-                Self::render_images_tab(ui, popup);
+                Self::render_general_tab(ui, popup, ui_actions, width_limit, cache);
+                Self::render_acquisition_tab(ui, popup, ui_actions, width_limit, cache);
+                Self::render_notes_tab(ui, popup, ui_actions, width_limit, cache);
+                Self::render_images_tab(ui, popup, cache);
             }
         }
         Self::render_button_ribbon(ui, pinned_popup_vec_index, popup, ui_actions);
@@ -48,8 +54,9 @@ impl Context {
         popup: &mut Popup,
         ui_actions: &mut Vec<UiAction>,
         width_limit: f32,
+        cache: &mut Cache
     ) {
-        if !popup.data.description.is_empty() || popup.data.item_ids.is_some() {
+        if Addon::read_config().show_general_tab && (!popup.data.description.is_empty() || popup.data.item_ids.is_some()) {
             if let Some(_token) = ui.tab_item(format!("General##rps{}", popup.id)) {
                 if !popup.data.description.is_empty() {
                     Self::render_tokens(
@@ -58,10 +65,11 @@ impl Context {
                         &popup.data.description,
                         ui_actions,
                         width_limit,
+                        cache
                     );
                     ui.new_line();
                 }
-                Self::render_prices(ui, popup);
+                Self::render_prices(ui, popup, cache);
             }
         }
     }
@@ -71,8 +79,9 @@ impl Context {
         popup: &mut Popup,
         ui_actions: &mut Vec<UiAction>,
         width_limit: f32,
+        cache: &mut Cache
     ) {
-        if !popup.data.acquisition.is_empty() {
+        if Addon::read_config().show_acquisition_tab && !popup.data.acquisition.is_empty() {
             if let Some(_token) = ui.tab_item(format!("Acquisition##rps{}", popup.id)) {
                 let mut render_func = || {
                     Self::render_tokens(
@@ -81,6 +90,7 @@ impl Context {
                         &popup.data.acquisition,
                         ui_actions,
                         width_limit,
+                        cache
                     );
                 };
                 if popup.data.acquisition.len() > TEXT_WRAP_LIMIT {
@@ -106,8 +116,9 @@ impl Context {
         popup: &mut Popup,
         ui_actions: &mut Vec<UiAction>,
         width_limit: f32,
+        cache: &mut Cache
     ) {
-        if !popup.data.notes.is_empty() {
+        if Addon::read_config().show_notes_tab && !popup.data.notes.is_empty() {
             if let Some(_token) = ui.tab_item(format!("Notes##rps{}", popup.id)) {
                 let screen_height = ui.io().display_size[1];
                 let mut render_func = || {
@@ -117,6 +128,7 @@ impl Context {
                         &popup.data.notes,
                         ui_actions,
                         width_limit,
+                        cache
                     );
                 };
                 if popup.data.notes.len() > TEXT_WRAP_LIMIT {
@@ -136,17 +148,17 @@ impl Context {
         }
     }
 
-    fn render_images_tab(ui: &Ui<'_>, popup: &mut Popup) {
-        if popup.data.images.is_empty() {
+    fn render_images_tab(ui: &Ui<'_>, popup: &mut Popup, cache: &mut Cache) {
+        if !Addon::read_config().show_images_tab || popup.data.images.is_empty() {
             return;
         }
         if let Some(_token) = ui.tab_item(format!("Images##rps{}", popup.id)) {
-            let render_func = || {
+            let mut render_func = || {
                 for token in &popup.data.images {
                     match token {
                         Token::Image(href) => {
                             let cached_data_opt =
-                                Addon::lock_cache().textures.retrieve(href.to_string());
+                                cache.textures.retrieve(href.to_string());
                             if let Some(cached_data) = cached_data_opt {
                                 if let CachingStatus::Cached = cached_data.caching_status {
                                     if let Some(texture) = cached_data.value() {
@@ -224,27 +236,27 @@ impl Context {
         }
     }
 
-    fn render_price(ui: &Ui, price: u32, x_pos: Option<f32>) {
+    fn render_price(ui: &Ui, price: u32, x_pos: Option<f32>, cache: &mut Cache) {
         if let Some(pos) = x_pos {
             ui.set_cursor_screen_pos([pos, ui.cursor_screen_pos()[1]]);
         }
         ui.text_colored(GOLD_COLOR, format!("{:02}", Self::gold_price_part(price)));
         ui.same_line();
-        Self::render_image(ui, GOLD_COIN_HREF);
+        Self::render_image(ui, GOLD_COIN_HREF, cache);
         ui.same_line();
         ui.text_colored(
             SILVER_COLOR,
             format!("{:02}", Self::silver_price_part(price)),
         );
         ui.same_line();
-        Self::render_image(ui, SILVER_COIN_HREF);
+        Self::render_image(ui, SILVER_COIN_HREF, cache);
         ui.same_line();
         ui.text_colored(
             COPPER_COLOR,
             format!("{:02}", Self::copper_price_part(price)),
         );
         ui.same_line();
-        Self::render_image(ui, COPPER_COIN_HREF);
+        Self::render_image(ui, COPPER_COIN_HREF, cache);
     }
     //TODO extract to some kind of converter
     fn gold_price_part(price: u32) -> u32 {
@@ -265,6 +277,7 @@ impl Context {
         tokens: &Vec<Token>,
         ui_actions: &mut Vec<UiAction>,
         width_limit: f32,
+        cache: &mut Cache
     ) {
         let style = ui.push_style_var(nexus::imgui::StyleVar::ItemSpacing([0.0, 5.0]));
         ui.spacing();
@@ -299,7 +312,7 @@ impl Context {
                     Self::render_list_element(ui, &mut starts_with_list, current_indent);
                 }
                 Token::Image(href) => {
-                    Self::render_image(ui, href);
+                    Self::render_image(ui, href, cache);
                 }
             }
             ui.same_line();
@@ -342,14 +355,14 @@ impl Context {
             width_limit,
             |ui, word| match style {
                 Style::Normal => ui.text(word),
-                Style::Highlighted => ui.text_colored(SUCCESS_COLOR, word),
+                Style::Highlighted => ui.text_colored(HIGHLIGHT_COLOR, word),
                 Style::Disabled => ui.text_disabled(word),
             },
         );
     }
 
-    fn render_image(ui: &Ui, href: &str) {
-        let cached_data_opt = Addon::lock_cache().textures.retrieve(href.to_string());
+    fn render_image(ui: &Ui, href: &str, cache: &mut Cache) {
+        let cached_data_opt = cache.textures.retrieve(href.to_string());
         if let Some(cached_data) = cached_data_opt {
             if let CachingStatus::Cached = cached_data.caching_status {
                 if let Some(texture) = cached_data.value() {
@@ -378,7 +391,7 @@ impl Context {
             current_indent,
             width_limit,
             |ui, word| {
-                ui.text_colored(LINK_COLOR, word);
+                ui.text_colored(Addon::read_config().link_color, word);
                 if ui.is_item_hovered() && ui.is_mouse_released(MouseButton::Left) && pinned {
                     ui_actions.push(UiAction::Open(UiLink {
                         title: title.clone(),
@@ -389,10 +402,10 @@ impl Context {
         );
     }
 
-    fn render_prices(ui: &Ui<'_>, popup: &mut Popup) {
+    fn render_prices(ui: &Ui<'_>, popup: &mut Popup, cache: &mut Cache) {
         if let Some(item_ids) = &popup.data.item_ids {
             ui.spacing();
-            let prices_opt = Addon::lock_cache().prices.retrieve(item_ids.clone());
+            let prices_opt = cache.prices.retrieve(item_ids.clone());
 
             if prices_opt.is_none() {
                 return;
@@ -418,11 +431,11 @@ impl Context {
                         ui.text("Sell ");
                         ui.same_line();
                         let sell_text_pos = ui.cursor_screen_pos()[0];
-                        Self::render_price(ui, price.lowest_sell, None);
+                        Self::render_price(ui, price.lowest_sell, None, cache);
 
                         ui.text("Buy ");
                         ui.same_line();
-                        Self::render_price(ui, price.highest_buy, Some(sell_text_pos));
+                        Self::render_price(ui, price.highest_buy, Some(sell_text_pos), cache);
                         if item_ids.len() > 1 {
                             ui.text_disabled("Showing the highest price for item with this name.");
                         }
@@ -442,11 +455,12 @@ impl Context {
         ui: &Ui<'_>,
         pinned_popup_vec_index: Option<usize>,
         popup: &mut Popup,
-        ui_actions: &mut Vec<UiAction>,
+        ui_actions: &mut Vec<UiAction>
     ) {
         if let Some(index) = pinned_popup_vec_index {
             ui.spacing();
-            if ui.button(format!("Open wiki##rps{}", popup.id)) {
+
+            if ui.button(format!("Open wiki##idp{}", popup.id)) {
                 let href = popup
                     .data
                     .redirection_href
@@ -456,12 +470,31 @@ impl Context {
                     log::error!("Failed to open wiki url: {err}");
                 }
             }
+            
             ui.same_line();
-            if ui.button(format!("Refresh##rps{}", index)) {
-                popup.pos = Some(ui.window_pos());
-                ui_actions.push(UiAction::Refresh(index));
+
+            if ui.button(format!("More..##idp{}", popup.id)) {
+                ui.open_popup(format!("##Popup_idp{}", popup.id));
             }
-        }
+            ui.popup(format!("##Popup_idp{}", popup.id), || {
+                if MenuItem::new(format!("Refresh##idp{}", popup.id)).build(ui) {
+                    popup.pos = Some(ui.window_pos());
+                    ui_actions.push(UiAction::Refresh(index));
+                }
+                if ui.is_item_hovered() {
+                    ui.tooltip(|| {
+                        let formatted_date = popup.data.cached_date.format("%d-%m-%Y %H:%M");
+                        ui.text(format!("Last refreshed on {}", formatted_date));
+                    });
+                }
+                if MenuItem::new(format!("Copy name##idp{}", popup.id)).build(ui) {
+                    let name = popup.data.title.clone();
+                    Addon::lock_threads().push(thread::spawn(move || {
+                        let _ = Addon::write_context().clipboard.set_text(name.as_str());
+                    }));
+                }
+            });
+         }
     }
 
     fn render_tag_bar(
@@ -473,7 +506,7 @@ impl Context {
         let tag_iterator = popup.data.tags.iter_mut().enumerate().peekable();
         if tag_iterator.len() > 0 {
             for (_, tag) in tag_iterator {
-                ui.text_colored(LINK_COLOR, format!("[{}]", tag.1));
+                ui.text_colored(Addon::read_config().link_color, format!("[{}]", tag.1));
                 if ui.is_item_hovered() && ui.is_mouse_released(MouseButton::Left) && popup.pinned {
                     ui_actions.push(UiAction::Open(UiLink {
                         href: tag.0.clone(),

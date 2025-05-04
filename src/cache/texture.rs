@@ -21,7 +21,7 @@ impl<'a> Cacheable<'a, TextureCache, CachedData<Texture>, String> for TextureCac
         let mut should_start_caching = false;
         let result = match self.get(&texture_id_with_prefix) {
             Some(texture_cached_data) => {
-                let cache_expiration_duration = Addon::lock_config().texture_expiration_duration;
+                let cache_expiration_duration = Addon::read_config().max_texture_expiration_duration;
                 let mut result = texture_cached_data.clone();
                 if is_cache_expired(cache_expiration_duration, texture_cached_data.date)
                     && !matches!(
@@ -79,7 +79,7 @@ pub fn receive_texture(id: &str, texture: Option<&Texture>) {
     if texture.is_none() {
         return;
     }
-    Addon::lock_cache().textures.insert(
+    Addon::write_context().cache.textures.insert(
         id.to_string(),
         CachedData::new_with_value(Local::now(), texture.unwrap().clone())
             .with_caching_status(CachingStatus::Cached),

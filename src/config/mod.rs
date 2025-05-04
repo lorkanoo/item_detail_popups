@@ -20,9 +20,26 @@ pub struct Config {
     pub version: String,
     pub max_popup_data_cache_elements: usize,
     pub max_popup_data_cache_expiration_duration: Duration,
-    pub texture_expiration_duration: Duration,
+    pub max_texture_expiration_duration: Duration,
     #[serde(default = "default_price_expiration")]
-    pub price_expiration_duration: Duration,
+    pub max_price_expiration_duration: Duration,
+    #[serde(default = "default_link_color")]
+    pub link_color: [f32; 4],
+    #[serde(default = "yes")]
+    pub show_general_tab: bool,
+    #[serde(default = "yes")]
+    pub show_acquisition_tab: bool,
+    #[serde(default = "yes")]
+    pub show_notes_tab: bool,
+    #[serde(default = "yes")]
+    pub show_images_tab: bool,
+    #[serde(default = "yes")]
+    pub show_tag_bar: bool,
+    #[serde(default = "yes")]
+    pub wait_until_all_keys_released: bool,
+    #[serde(default = "yes")]
+    pub close_on_mouse_away: bool,
+
 }
 
 impl Persistent for Config {
@@ -70,8 +87,16 @@ impl Default for Config {
             max_popup_data_cache_expiration_duration: Duration::from_secs(
                 DEFAULT_POPUP_DATA_CACHE_EXPIRATION_SECS,
             ),
-            price_expiration_duration: DEFAULT_PRICE_EXPIRATION_DURATION,
-            texture_expiration_duration: DEFAULT_TEXTURE_EXPIRATION_DURATION,
+            max_price_expiration_duration: DEFAULT_PRICE_EXPIRATION_DURATION,
+            max_texture_expiration_duration: DEFAULT_TEXTURE_EXPIRATION_DURATION,
+            link_color: default_link_color(),
+            show_general_tab: yes(),
+            show_acquisition_tab: yes(),
+            show_notes_tab: yes(),
+            show_images_tab: yes(),
+            show_tag_bar: yes(),
+            wait_until_all_keys_released: yes(),
+            close_on_mouse_away: yes(),
         }
     }
 }
@@ -100,4 +125,12 @@ fn default_version() -> String {
 
 fn default_price_expiration() -> Duration {
     DEFAULT_PRICE_EXPIRATION_DURATION
+}
+
+fn default_link_color() -> [f32; 4] {
+    [0.2, 0.4, 0.8, 1.0]
+}
+
+fn yes() -> bool {
+    true
 }

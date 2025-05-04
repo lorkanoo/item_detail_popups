@@ -6,7 +6,7 @@ use crate::config::textures_dir;
 use crate::context::ui::popup::Style::{Highlighted, Normal};
 use crate::context::ui::popup::{Popup, PopupData, Style, TagParams, Token};
 use ego_tree::NodeRef;
-use log::{debug, info, warn};
+use log::{debug, info, warn, error};
 use scraper::{CaseSensitivity, ElementRef, Html, Node, Selector};
 use std::fs::{self, File};
 use std::io::copy;
@@ -25,16 +25,17 @@ pub fn prepare_item_popup(item_name: &str) -> Popup {
     );
     let item_name_href = format!("/wiki/{}", item_name.replace(" ", "_"));
     let mut popup = prepare_popup(&item_name_href, item_name.to_owned());
-    Addon::lock_context().ui.loading_progress = Some(10);
-    if let Some(mut cached_data) = Addon::lock_cache().popup_data_map.retrieve(&item_name_href) {
+    Addon::write_context().ui.loading_progress = Some(10);
+    if let Some(mut cached_data) = Addon::write_context().cache.popup_data_map.retrieve(&item_name_href) {
         cached_data.item_ids = popup.data.item_ids.clone();
         cached_data.title = popup.data.title.clone();
         return Popup::new(cached_data);
     }
     if !fill_wiki_details(&item_name_href, &mut popup) {
-        Addon::lock_context().ui.loading_progress = Some(50);
-        if let Some(mut popup) = fill_using_special_search(&mut popup) {
-            Addon::lock_cache()
+        Addon::write_context().ui.loading_progress = Some(50);
+        if let Some(mut popup) = fill_using_special_search(item_name.to_string(), &mut popup) {
+            Addon::write_context()
+                .cache
                 .popup_data_map
                 .store(&item_name_href, &mut popup.data);
             popup.data.item_ids = popup.data.item_ids.clone();
@@ -42,7 +43,8 @@ pub fn prepare_item_popup(item_name: &str) -> Popup {
             return popup;
         }
     }
-    Addon::lock_cache()
+    Addon::write_context()
+        .cache
         .popup_data_map
         .store(&item_name_href, &mut popup.data);
     popup
@@ -71,41 +73,51 @@ pub fn download_wiki_image(href: &String) -> Result<(), ureq::Error> {
     }
 }
 
-fn fill_using_special_search(popup: &mut Popup) -> Option<Popup> {
-    if let Some(item_ids) = &popup.data.item_ids {
-        let id = item_ids[0];
-        let special_search_result = special_search(id, &special_search_href(id));
-        if let Some(result) = special_search_result {
-            let redirection_href = result.0;
-            if let Some(mut cached_data) = Addon::lock_cache()
+fn fill_using_special_search(item_name: String, popup: &mut Popup) -> Option<Popup> {
+    let id = match &popup.data.item_ids {
+        Some(ids) => Some(ids[0]),
+        None => None
+    };
+    let special_search_result = special_search(id, &special_search_href(item_name, id));
+    if let Some(result) = special_search_result {
+        let redirection_href = result.0;
+        let mut context = Addon::write_context();
+        if let Some(mut cached_data) = context
+            .cache
+            .popup_data_map
+            .retrieve(&redirection_href)
+        {
+            context
+                .cache
                 .popup_data_map
-                .retrieve(&redirection_href)
-            {
-                Addon::lock_cache()
-                    .popup_data_map
-                    .store(&redirection_href, &mut cached_data);
-                return Some(Popup::new(cached_data));
-            }
-            Addon::lock_context().ui.loading_progress = Some(75);
-            popup.data.redirection_href = Some(redirection_href.clone());
-            fill_wiki_details(&redirection_href, popup);
-            Addon::lock_cache()
-                .popup_data_map
-                .store(&redirection_href, &mut popup.data);
+                .store(&redirection_href, &mut cached_data);
+            return Some(Popup::new(cached_data));
         }
+        context.ui.loading_progress = Some(75);
+        popup.data.redirection_href = Some(redirection_href.clone());
+        drop(context);
+        fill_wiki_details(&redirection_href, popup);
+        Addon::write_context()
+            .cache
+            .popup_data_map
+            .store(&redirection_href, &mut popup.data);
     }
     None
 }
 
-fn special_search_href(item_id: u32) -> String {
-    format!(
-        "/wiki/Special:RunQuery/Search_by_id?title=Special%3ARunQuery%2FSearch_by_id\
-        &pfRunQueryFormName=Search+by+id&Search_by_id=id%3D45105%26context%3DItem\
-        &wpRunQuery=&pf_free_text=\
-        &Search+by+id%5Bid%5D={}\
-        &Search+by+id%5Bcontext%5D=Item&wpRunQuery=&pf_free_text=",
-        item_id
-    )
+fn special_search_href(item_name: String, item_id: Option<u32>) -> String {
+    if let Some(item_id) = item_id {
+        return format!(
+            "/wiki/Special:RunQuery/Search_by_id?title=Special%3ARunQuery%2FSearch_by_id\
+            &pfRunQueryFormName=Search+by+id&Search_by_id=id%3D45105%26context%3DItem\
+            &wpRunQuery=&pf_free_text=\
+            &Search+by+id%5Bid%5D={}\
+            &Search+by+id%5Bcontext%5D=Item&wpRunQuery=&pf_free_text=",
+            item_id
+        );
+    } else {
+        return format!("/index.php?search={item_name}&title=Special%3ASearch&profile=advanced&fulltext=1&ns0=1");
+    } 
 }
 
 pub fn prepare_href_popup(href: &String, title: String) -> Popup {
@@ -113,10 +125,10 @@ pub fn prepare_href_popup(href: &String, title: String) -> Popup {
         "[prepare_href_popup] Preparing popup for href: {} and title: {}",
         href, title
     );
-    Addon::lock_context().ui.loading_progress = Some(10);
-    let cached_data_opt = Addon::lock_cache().popup_data_map.retrieve(href);
+    Addon::write_context().ui.loading_progress = Some(10);
+    let cached_data_opt = Addon::write_context().cache.popup_data_map.retrieve(href);
     if let Some(mut cached_data) = cached_data_opt {
-        if let Some(item_names) = Addon::lock_cache().item_names.retrieve(()) {
+        if let Some(item_names) = Addon::write_context().cache.item_names.retrieve(()) {
             cached_data.item_ids = item_names.get(&title).cloned();
         }
         return Popup::new(cached_data);
@@ -124,7 +136,8 @@ pub fn prepare_href_popup(href: &String, title: String) -> Popup {
 
     let mut popup = prepare_popup(href, title);
     fill_wiki_details(href, &mut popup);
-    Addon::lock_cache()
+    Addon::write_context()
+        .cache
         .popup_data_map
         .store(href, &mut popup.data);
     popup
@@ -140,7 +153,7 @@ fn prepare_popup(href: &str, title: String) -> Popup {
         href: href.to_owned(),
         ..PopupData::default()
     };
-    if let Some(item_names) = Addon::lock_cache().item_names.value() {
+    if let Some(item_names) = Addon::read_context().cache.item_names.value() {
         data.item_ids = item_names.get(&title).cloned();
     }
     Popup::new(data)
@@ -152,6 +165,7 @@ pub fn fill_wiki_details(href: &String, popup: &mut Popup) -> bool {
     match get_sync(path) {
         Ok(response) => match response.into_string() {
             Ok(text) => {
+                debug!("[fill_wiki_details] response text: {}", text);
                 let document = Html::parse_document(&text);
 
                 let exists_selector = Selector::parse(".noarticletext").unwrap();
@@ -166,13 +180,13 @@ pub fn fill_wiki_details(href: &String, popup: &mut Popup) -> bool {
                 fill_images(&document, popup);
                 true
             }
-            Err(_) => {
-                warn!("[fill_wiki_details] failed to fetch text");
+            Err(e) => {
+                error!("[fill_wiki_details] failed to fetch text: {}", e);
                 false
             }
         },
-        Err(_) => {
-            debug!("[fill_wiki_details] could not fetch data from wiki");
+        Err(e) => {
+            error!("[fill_wiki_details] could not fetch data from wiki: {}", e);
             false
         }
     }
@@ -323,42 +337,58 @@ fn fill_images(document: &Html, popup: &mut Popup) {
 }
 
 // result: href, title
-pub fn special_search(item_id: u32, href: &String) -> Option<(String, String)> {
-    debug!("[special_search] started");
+pub fn special_search(item_id: Option<u32>, href: &String) -> Option<(String, String)> {
     let path = href_to_wiki_url(href);
+    debug!("[special_search] url {href}");
     match get_sync(path) {
         Ok(response) => match response.into_string() {
             Ok(text) => {
                 let document = Html::parse_document(&text);
-                let selector = format!(r#"td[data-sort-value="{}"]"#, item_id);
-                let item_selector = Selector::parse(selector.as_str()).unwrap();
-                if let Some(tag_element) = document.select(&item_selector).next() {
-                    if let Some(parent) = tag_element.parent() {
-                        if parent.value().is_element() {
-                            let element = ElementRef::wrap(parent).unwrap();
-                            let link_selector = Selector::parse("a").unwrap();
-                            if let Some(a_element) = element.select(&link_selector).next() {
-                                let mut result: (String, String) = ("".to_string(), "".to_string());
-                                if let Some(href) = a_element.value().attr("href") {
-                                    result.0 = href.split("#").next().unwrap_or("").to_string();
+                if let Some(item_id) = item_id {
+                    let selector = format!(r#"td[data-sort-value="{}"]"#, item_id);
+                    let item_selector = Selector::parse(selector.as_str()).unwrap();
+                    if let Some(tag_element) = document.select(&item_selector).next() {
+                        if let Some(parent) = tag_element.parent() {
+                            if parent.value().is_element() {
+                                let element = ElementRef::wrap(parent).unwrap();
+                                let link_selector = Selector::parse("a").unwrap();
+                                if let Some(a_element) = element.select(&link_selector).next() {
+                                    let mut result: (String, String) = ("".to_string(), "".to_string());
+                                    if let Some(href) = a_element.value().attr("href") {
+                                        result.0 = href.split("#").next().unwrap_or("").to_string();
+                                    }
+                                    if let Some(title) = a_element.value().attr("title") {
+                                        result.1 = title.to_string();
+                                    }
+                                    return Some(result);
                                 }
-                                if let Some(title) = a_element.value().attr("title") {
-                                    result.1 = title.to_string();
-                                }
-                                return Some(result);
                             }
                         }
                     }
                 }
+                let selector_alternative = format!(r#".mw-search-result-heading a"#);
+                let item_selector_alternative = Selector::parse(selector_alternative.as_str()).unwrap();
+                if let Some(tag_element) = document.select(&item_selector_alternative).next() {
+                    info!("tag element found {tag_element:?}");
+                    let mut result: (String, String) = ("".to_string(), "".to_string());
+                    if let Some(href) = tag_element.value().attr("href") {
+                        result.0 = href.split("#").next().unwrap_or("").to_string();
+                    }
+                    if let Some(title) = tag_element.value().attr("title") {
+                        result.1 = title.to_string();
+                    }
+                    return Some(result);
+                }
+
                 None
             }
-            Err(_) => {
-                warn!("[special_search] failed to fetch text");
+            Err(e) => {
+                error!("[special_search] failed to fetch text: {}", e);
                 None
             }
         },
-        Err(_) => {
-            debug!("[special_search] could not fetch data from wiki");
+        Err(e) => {
+            debug!("[special_search] could not fetch data from wiki: {}", e);
             None
         }
     }

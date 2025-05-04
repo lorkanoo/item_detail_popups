@@ -1,4 +1,3 @@
-mod cache;
 mod config;
 mod context;
 mod keybind;
@@ -11,7 +10,7 @@ use crate::context::Context;
 use log::info;
 use nexus::gui::{register_render, RenderType};
 use std::fs;
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Mutex, OnceLock, RwLock};
 use std::thread::JoinHandle;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -19,14 +18,12 @@ static MULTITHREADED_ADDON: Addon = Addon {
     context: OnceLock::new(),
     config: OnceLock::new(),
     threads: OnceLock::new(),
-    cache: OnceLock::new(),
 };
 
 pub struct Addon {
-    context: OnceLock<Mutex<Context>>,
-    config: OnceLock<Mutex<Config>>,
+    context: OnceLock<RwLock<Context>>,
+    config: OnceLock<RwLock<Config>>,
     threads: OnceLock<Mutex<Vec<JoinHandle<()>>>>,
-    cache: OnceLock<Mutex<Cache>>,
 }
 
 impl Addon {
@@ -36,19 +33,20 @@ impl Addon {
         Self::init_threads();
         Self::register_renderers();
         Self::register_show_popup_keybind();
+        Self::register_open_search_keybind();
         info!("[load] item_detail_popups loaded");
     }
 
     fn register_renderers() {
         register_render(
             RenderType::Render,
-            nexus::gui::render!(|ui| Addon::lock_context().render(ui)),
+            nexus::gui::render!(|ui| Addon::write_context().render(ui)),
         )
         .revert_on_unload();
 
         register_render(
             RenderType::OptionsRender,
-            nexus::gui::render!(|ui| Addon::lock_context().render_options(ui)),
+            nexus::gui::render!(|ui| Addon::write_context().render_options(ui)),
         )
         .revert_on_unload();
     }
@@ -56,9 +54,9 @@ impl Addon {
     fn load_config_files() {
         let _ = fs::create_dir(config_dir());
         {
-            Addon::lock_config().load();
-            Addon::lock_cache().popup_data_map.load();
-            Addon::lock_cache().item_names.load();
+            Addon::write_config().load();
+            Addon::write_context().cache.popup_data_map.load();
+            Addon::write_context().cache.item_names.load();
         }
     }
 
@@ -72,11 +70,11 @@ impl Addon {
 
     fn save_config() {
         info!("[save_config] Saving configuration..");
-        Self::lock_config().save();
+        Self::read_config().save();
     }
 
     fn save_cache() {
-        Self::lock_cache().item_names.save();
-        Self::lock_cache().popup_data_map.save();
+        Self::read_context().cache.item_names.save();
+        Self::read_context().cache.popup_data_map.save();
     }
 }

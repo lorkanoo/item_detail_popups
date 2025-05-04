@@ -1,8 +1,9 @@
 use nexus::imgui::sys::{self, igGetMousePos};
-use nexus::imgui::Ui;
+use nexus::imgui::{ColorEdit, ColorPreview, Ui};
 
 pub trait UiExtended {
     fn mouse_in_bounds(&self, point_min: [f32; 2], point_max: [f32; 2]) -> bool;
+    fn input_color_alpha(&self, ui: &Ui, label: impl AsRef<str>, color: &mut [f32; 4]) -> bool;
 }
 
 impl UiExtended for Ui<'_> {
@@ -13,5 +14,12 @@ impl UiExtended for Ui<'_> {
             && bounds_min[1] < mouse_pos.y
             && mouse_pos.x < bounds_max[0]
             && mouse_pos.y < bounds_max[1]
+    }
+    
+    fn input_color_alpha(&self, ui: &Ui, label: impl AsRef<str>, color: &mut [f32; 4]) -> bool {
+    ColorEdit::new(label, color)
+        .preview(ColorPreview::Alpha)
+        .alpha_bar(true)
+        .build(ui)
     }
 }

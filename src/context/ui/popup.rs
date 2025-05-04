@@ -2,7 +2,6 @@ use chrono::{DateTime, Local};
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::render::util::ui::{Linkable, UiElement};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
@@ -36,34 +35,6 @@ impl Popup {
             pos: None,
             data,
         }
-    }
-}
-
-impl UiElement for Popup {
-    fn rename(&mut self, new_name: String) {
-        self.data.title = new_name;
-    }
-
-    fn name(&self) -> &String {
-        &self.data.title
-    }
-
-    fn id(&self) -> &u64 {
-        &self.id
-    }
-
-    fn pos(&self) -> &Option<[f32; 2]> {
-        &self.pos
-    }
-}
-
-impl Linkable for Popup {
-    fn href(&self) -> &String {
-        &self.data.href
-    }
-
-    fn redirection_href(&self) -> &Option<String> {
-        &self.data.redirection_href
     }
 }
 

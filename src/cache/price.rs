@@ -22,7 +22,7 @@ impl<'a> Cacheable<'a, PriceCache, PriceCache, Vec<u32>> for PriceCache {
             match self.get(&item_id) {
                 Some(price) => {
                     result.insert(item_id, price.clone());
-                    if is_cache_expired(Addon::lock_config().price_expiration_duration, price.date)
+                    if is_cache_expired(Addon::read_config().max_price_expiration_duration, price.date)
                         && !matches!(&price.caching_status, CachingStatus::InProgress)
                     {
                         let new: CachedData<Price> =

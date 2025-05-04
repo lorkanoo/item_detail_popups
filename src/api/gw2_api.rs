@@ -5,7 +5,7 @@ use crate::cache::CachedData;
 use crate::cache::CachingStatus::Cached;
 use chrono::Local;
 
-use log::{debug, warn};
+use log::{debug, error, warn};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::thread;
@@ -52,15 +52,16 @@ pub fn fetch_prices_thread(prices_to_cache: HashMap<u32, CachedData<Price>>) {
                                 CachedData::new_with_value(Local::now(), new_price)
                                     .with_caching_status(Cached);
 
-                            Addon::lock_cache()
+                            Addon::write_context()
+                                .cache
                                 .prices
                                 .insert(price_data.id, new_cached_price);
                         }
                     }
                 }
-                Err(e) => warn!("[get_sync] failed to parse prices json: {}", e),
+                Err(e) => error!("[get_sync] failed to parse prices json: {}", e),
             },
-            Err(e) => warn!("[get_sync] failed to fetch prices: {}", e),
+            Err(e) => error!("[get_sync] failed to fetch prices: {}", e),
         }
     }));
 }

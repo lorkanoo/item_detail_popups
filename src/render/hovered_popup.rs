@@ -1,6 +1,6 @@
 use nexus::imgui::Ui;
 
-use crate::context::Context;
+use crate::{addon::Addon, context::Context};
 
 use super::util::ui::{extended::UiExtended, UiAction};
 
@@ -18,9 +18,11 @@ impl Context {
                 let width_limit = window_start + 640.0;
 
                 ui.group(|| {
-                    Self::render_popup_data(ui, None, popup, &mut ui_actions, width_limit);
+                    Self::render_popup_data(ui, None, popup, &mut ui_actions, width_limit, &mut self.cache);
                 });
-                Self::close_popup_on_mouse_away(ui, &mut ui_actions);
+                if Addon::read_config().close_on_mouse_away {
+                    Self::close_popup_on_mouse_away(ui, &mut ui_actions);
+                }
                 if ui.is_item_clicked() && !popup.pinned {
                     Self::pin_popup(ui, popup, &mut ui_actions);
                 }
