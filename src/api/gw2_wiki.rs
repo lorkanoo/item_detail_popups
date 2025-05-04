@@ -6,7 +6,7 @@ use crate::config::textures_dir;
 use crate::context::ui::popup::Style::{Highlighted, Normal};
 use crate::context::ui::popup::{Popup, PopupData, Style, TagParams, Token};
 use ego_tree::NodeRef;
-use log::{debug, info, warn, error};
+use log::{debug, error, info};
 use scraper::{CaseSensitivity, ElementRef, Html, Node, Selector};
 use std::fs::{self, File};
 use std::io::copy;
@@ -26,7 +26,11 @@ pub fn prepare_item_popup(item_name: &str) -> Popup {
     let item_name_href = format!("/wiki/{}", item_name.replace(" ", "_"));
     let mut popup = prepare_popup(&item_name_href, item_name.to_owned());
     Addon::write_context().ui.loading_progress = Some(10);
-    if let Some(mut cached_data) = Addon::write_context().cache.popup_data_map.retrieve(&item_name_href) {
+    if let Some(mut cached_data) = Addon::write_context()
+        .cache
+        .popup_data_map
+        .retrieve(&item_name_href)
+    {
         cached_data.item_ids = popup.data.item_ids.clone();
         cached_data.title = popup.data.title.clone();
         return Popup::new(cached_data);
@@ -74,19 +78,12 @@ pub fn download_wiki_image(href: &String) -> Result<(), ureq::Error> {
 }
 
 fn fill_using_special_search(item_name: String, popup: &mut Popup) -> Option<Popup> {
-    let id = match &popup.data.item_ids {
-        Some(ids) => Some(ids[0]),
-        None => None
-    };
+    let id = popup.data.item_ids.as_ref().map(|ids| ids[0]);
     let special_search_result = special_search(id, &special_search_href(item_name, id));
     if let Some(result) = special_search_result {
         let redirection_href = result.0;
         let mut context = Addon::write_context();
-        if let Some(mut cached_data) = context
-            .cache
-            .popup_data_map
-            .retrieve(&redirection_href)
-        {
+        if let Some(mut cached_data) = context.cache.popup_data_map.retrieve(&redirection_href) {
             context
                 .cache
                 .popup_data_map
@@ -107,17 +104,17 @@ fn fill_using_special_search(item_name: String, popup: &mut Popup) -> Option<Pop
 
 fn special_search_href(item_name: String, item_id: Option<u32>) -> String {
     if let Some(item_id) = item_id {
-        return format!(
+        format!(
             "/wiki/Special:RunQuery/Search_by_id?title=Special%3ARunQuery%2FSearch_by_id\
             &pfRunQueryFormName=Search+by+id&Search_by_id=id%3D45105%26context%3DItem\
             &wpRunQuery=&pf_free_text=\
             &Search+by+id%5Bid%5D={}\
             &Search+by+id%5Bcontext%5D=Item&wpRunQuery=&pf_free_text=",
             item_id
-        );
+        )
     } else {
-        return format!("/index.php?search={item_name}&title=Special%3ASearch&profile=advanced&fulltext=1&ns0=1");
-    } 
+        format!("/index.php?search={item_name}&title=Special%3ASearch&profile=advanced&fulltext=1&ns0=1")
+    }
 }
 
 pub fn prepare_href_popup(href: &String, title: String) -> Popup {
@@ -353,7 +350,8 @@ pub fn special_search(item_id: Option<u32>, href: &String) -> Option<(String, St
                                 let element = ElementRef::wrap(parent).unwrap();
                                 let link_selector = Selector::parse("a").unwrap();
                                 if let Some(a_element) = element.select(&link_selector).next() {
-                                    let mut result: (String, String) = ("".to_string(), "".to_string());
+                                    let mut result: (String, String) =
+                                        ("".to_string(), "".to_string());
                                     if let Some(href) = a_element.value().attr("href") {
                                         result.0 = href.split("#").next().unwrap_or("").to_string();
                                     }
@@ -366,8 +364,9 @@ pub fn special_search(item_id: Option<u32>, href: &String) -> Option<(String, St
                         }
                     }
                 }
-                let selector_alternative = format!(r#".mw-search-result-heading a"#);
-                let item_selector_alternative = Selector::parse(selector_alternative.as_str()).unwrap();
+                let selector_alternative = r#".mw-search-result-heading a"#.to_string();
+                let item_selector_alternative =
+                    Selector::parse(selector_alternative.as_str()).unwrap();
                 if let Some(tag_element) = document.select(&item_selector_alternative).next() {
                     info!("tag element found {tag_element:?}");
                     let mut result: (String, String) = ("".to_string(), "".to_string());

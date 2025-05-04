@@ -73,7 +73,10 @@ pub fn refresh_popup_thread(id: u64, name: String, pos: Option<[f32; 2]>) {
         refreshed_popup.opened = true;
         refreshed_popup.pinned = true;
         refreshed_popup.pos = pos;
-        Addon::write_context().ui.pinned_popups.push(refreshed_popup);
+        Addon::write_context()
+            .ui
+            .pinned_popups
+            .push(refreshed_popup);
         Addon::write_context().ui.loading_progress = None;
     }));
 }

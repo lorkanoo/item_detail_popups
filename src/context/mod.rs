@@ -1,4 +1,3 @@
-
 mod cloneable_clipboard;
 mod links;
 pub mod ui;
@@ -18,8 +17,7 @@ pub struct Context {
     pub cache: Cache,
     pub search_text: String,
     pub should_open_search: bool,
-    pub search_opened: bool
-    
+    pub search_opened: bool,
 }
 
 impl Default for Context {
@@ -33,7 +31,7 @@ impl Default for Context {
             cache: Cache::default(),
             search_text: "".to_string(),
             should_open_search: false,
-            search_opened: false
+            search_opened: false,
         }
     }
 }

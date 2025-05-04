@@ -1,14 +1,11 @@
 use crate::addon::Addon;
 use crate::api::gw2_wiki::href_to_wiki_url;
-use crate::cache;
 use crate::cache::Cache;
 use crate::cache::Cacheable;
 use crate::cache::CachingStatus;
 use crate::context::ui::popup::{Popup, Style, TagParams, Token};
 use crate::context::Context;
-use crate::render::util::ui::{
-    UiAction, COPPER_COLOR, GOLD_COLOR, SILVER_COLOR, HIGHLIGHT_COLOR,
-};
+use crate::render::util::ui::{UiAction, COPPER_COLOR, GOLD_COLOR, HIGHLIGHT_COLOR, SILVER_COLOR};
 use nexus::imgui::MenuItem;
 use nexus::imgui::{sys, ChildWindow, MouseButton, Ui};
 use std::ptr;
@@ -29,7 +26,7 @@ impl Context {
         popup: &mut Popup,
         ui_actions: &mut Vec<UiAction>,
         width_limit: f32,
-        cache: &mut Cache
+        cache: &mut Cache,
     ) {
         if !popup.pinned {
             ui.text(&popup.data.title);
@@ -54,9 +51,11 @@ impl Context {
         popup: &mut Popup,
         ui_actions: &mut Vec<UiAction>,
         width_limit: f32,
-        cache: &mut Cache
+        cache: &mut Cache,
     ) {
-        if Addon::read_config().show_general_tab && (!popup.data.description.is_empty() || popup.data.item_ids.is_some()) {
+        if Addon::read_config().show_general_tab
+            && (!popup.data.description.is_empty() || popup.data.item_ids.is_some())
+        {
             if let Some(_token) = ui.tab_item(format!("General##rps{}", popup.id)) {
                 if !popup.data.description.is_empty() {
                     Self::render_tokens(
@@ -65,7 +64,7 @@ impl Context {
                         &popup.data.description,
                         ui_actions,
                         width_limit,
-                        cache
+                        cache,
                     );
                     ui.new_line();
                 }
@@ -79,7 +78,7 @@ impl Context {
         popup: &mut Popup,
         ui_actions: &mut Vec<UiAction>,
         width_limit: f32,
-        cache: &mut Cache
+        cache: &mut Cache,
     ) {
         if Addon::read_config().show_acquisition_tab && !popup.data.acquisition.is_empty() {
             if let Some(_token) = ui.tab_item(format!("Acquisition##rps{}", popup.id)) {
@@ -90,7 +89,7 @@ impl Context {
                         &popup.data.acquisition,
                         ui_actions,
                         width_limit,
-                        cache
+                        cache,
                     );
                 };
                 if popup.data.acquisition.len() > TEXT_WRAP_LIMIT {
@@ -116,7 +115,7 @@ impl Context {
         popup: &mut Popup,
         ui_actions: &mut Vec<UiAction>,
         width_limit: f32,
-        cache: &mut Cache
+        cache: &mut Cache,
     ) {
         if Addon::read_config().show_notes_tab && !popup.data.notes.is_empty() {
             if let Some(_token) = ui.tab_item(format!("Notes##rps{}", popup.id)) {
@@ -128,7 +127,7 @@ impl Context {
                         &popup.data.notes,
                         ui_actions,
                         width_limit,
-                        cache
+                        cache,
                     );
                 };
                 if popup.data.notes.len() > TEXT_WRAP_LIMIT {
@@ -157,8 +156,7 @@ impl Context {
                 for token in &popup.data.images {
                     match token {
                         Token::Image(href) => {
-                            let cached_data_opt =
-                                cache.textures.retrieve(href.to_string());
+                            let cached_data_opt = cache.textures.retrieve(href.to_string());
                             if let Some(cached_data) = cached_data_opt {
                                 if let CachingStatus::Cached = cached_data.caching_status {
                                     if let Some(texture) = cached_data.value() {
@@ -277,7 +275,7 @@ impl Context {
         tokens: &Vec<Token>,
         ui_actions: &mut Vec<UiAction>,
         width_limit: f32,
-        cache: &mut Cache
+        cache: &mut Cache,
     ) {
         let style = ui.push_style_var(nexus::imgui::StyleVar::ItemSpacing([0.0, 5.0]));
         ui.spacing();
@@ -455,7 +453,7 @@ impl Context {
         ui: &Ui<'_>,
         pinned_popup_vec_index: Option<usize>,
         popup: &mut Popup,
-        ui_actions: &mut Vec<UiAction>
+        ui_actions: &mut Vec<UiAction>,
     ) {
         if let Some(index) = pinned_popup_vec_index {
             ui.spacing();
@@ -470,7 +468,7 @@ impl Context {
                     log::error!("Failed to open wiki url: {err}");
                 }
             }
-            
+
             ui.same_line();
 
             if ui.button(format!("More..##idp{}", popup.id)) {
@@ -494,7 +492,7 @@ impl Context {
                     }));
                 }
             });
-         }
+        }
     }
 
     fn render_tag_bar(

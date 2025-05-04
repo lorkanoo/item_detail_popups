@@ -3,7 +3,7 @@ mod context;
 mod keybind;
 mod threads;
 
-use crate::cache::{Cache, Persistent};
+use crate::cache::Persistent;
 use crate::config::{config_dir, Config};
 use crate::context::Context;
 

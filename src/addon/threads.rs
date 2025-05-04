@@ -2,21 +2,26 @@ use crate::addon::{Addon, MULTITHREADED_ADDON};
 use crate::api::gw2tp::fetch_item_names_thread;
 use crate::thread::{gc_thread, main_background_thread, preloader_thread};
 
-use log::{info, debug, error};
+use log::{debug, error, info};
 use std::sync::{Mutex, MutexGuard};
-use std::thread::JoinHandle;
 use std::thread;
+use std::thread::JoinHandle;
 impl Addon {
     pub fn lock_threads() -> MutexGuard<'static, Vec<JoinHandle<()>>> {
-        debug!("[lock_threads] Acquiring lock (thread {:?})", thread::current().id());
+        debug!(
+            "[lock_threads] Acquiring lock (thread {:?})",
+            thread::current().id()
+        );
         let result = MULTITHREADED_ADDON
             .threads
             .get_or_init(|| Mutex::new(Vec::new()))
             .lock()
             .unwrap();
-        debug!("[lock_threads] Lock acquired (thread {:?})", thread::current().id());
+        debug!(
+            "[lock_threads] Lock acquired (thread {:?})",
+            thread::current().id()
+        );
         result
-
     }
 
     pub fn init_threads() {

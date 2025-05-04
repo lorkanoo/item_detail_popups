@@ -31,17 +31,39 @@ impl Context {
 
     fn render_style_options(&mut self, ui: &Ui) {
         ui.text("Link color:");
-        ui.input_color_alpha(ui, "##idp_link_color", &mut Addon::write_config().link_color);
-        ui.checkbox("Show general tab##idp", &mut Addon::write_config().show_general_tab);
-        ui.checkbox("Show acquisition tab##idp", &mut Addon::write_config().show_acquisition_tab);
-        ui.checkbox("Show notes tab##idp", &mut Addon::write_config().show_notes_tab);
-        ui.checkbox("Show images tab##idp", &mut Addon::write_config().show_images_tab);
+        ui.input_color_alpha(
+            ui,
+            "##idp_link_color",
+            &mut Addon::write_config().link_color,
+        );
+        ui.checkbox(
+            "Show general tab##idp",
+            &mut Addon::write_config().show_general_tab,
+        );
+        ui.checkbox(
+            "Show acquisition tab##idp",
+            &mut Addon::write_config().show_acquisition_tab,
+        );
+        ui.checkbox(
+            "Show notes tab##idp",
+            &mut Addon::write_config().show_notes_tab,
+        );
+        ui.checkbox(
+            "Show images tab##idp",
+            &mut Addon::write_config().show_images_tab,
+        );
         ui.checkbox("Show tag bar##idp", &mut Addon::write_config().show_tag_bar);
     }
 
     fn render_advanced_options(&mut self, ui: &Ui) {
-        ui.checkbox("Wait until all keys are released before opening the popup##idp", &mut Addon::write_config().wait_until_all_keys_released);
-        ui.checkbox("Close popup when mouse moves away##idp", &mut Addon::write_config().close_on_mouse_away);
+        ui.checkbox(
+            "Wait until all keys are released before opening the popup##idp",
+            &mut Addon::write_config().wait_until_all_keys_released,
+        );
+        ui.checkbox(
+            "Close popup when mouse moves away##idp",
+            &mut Addon::write_config().close_on_mouse_away,
+        );
     }
 
     fn render_cache_options(&mut self, ui: &Ui) {
@@ -63,11 +85,8 @@ impl Context {
         if let Ok(mut price_expiration_secs) = i32::try_from(price_expiration) {
             ui.spacing();
             ui.text("Price refresh frequency:");
-            ui.input_int(
-                "Seconds##itp_prf",
-                &mut price_expiration_secs,
-            )
-            .build();
+            ui.input_int("Seconds##itp_prf", &mut price_expiration_secs)
+                .build();
             price_expiration_secs =
                 price_expiration_secs.clamp(MINIMUM_PRICE_EXPIRATION_SEC, MAX_PRICE_EXPIRATION_SEC);
             Addon::write_config().max_price_expiration_duration =
@@ -121,7 +140,6 @@ impl Context {
             Duration::from_secs(hours as u64 * 3600 + minutes as u64 * 60);
     }
 
-
     fn render_max_cached_popup_data_elements(&mut self, ui: &Ui<'_>) {
         debug!("[render_max_cached_popup_data_elements] Started.");
         let max_popup_data_cache_elements = Addon::read_config().max_popup_data_cache_elements;
@@ -143,8 +161,7 @@ impl Context {
         let mut cache_used = 0.00;
         let cache_elements = Addon::read_config().max_popup_data_cache_elements;
         if cache_elements > 0 {
-            cache_used =
-                self.cache.popup_data_map.len() as f32 / cache_elements as f32 * 100.0;
+            cache_used = self.cache.popup_data_map.len() as f32 / cache_elements as f32 * 100.0;
         }
         ui.text(format!("{:.2}% cache used", cache_used));
     }

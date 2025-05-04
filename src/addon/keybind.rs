@@ -3,7 +3,7 @@ use crate::api::gw2_wiki::prepare_item_popup;
 use crate::util::extract_item_name;
 use crate::util::key_combination::{trigger_key_combination, KeyCombination};
 use crate::util::ui_state::textbox_has_focus;
-use log::{debug, warn, error};
+use log::{debug, error};
 use nexus::keybind::register_keybind_with_string;
 use nexus::keybind_handler;
 use std::thread;
@@ -70,14 +70,9 @@ impl Addon {
                 Addon::write_context().should_open_search = true;
             }
         });
-        register_keybind_with_string(
-            "Open search",
-            keybind_handler,
-            "CTRL+SHIFT+F",
-        )
-        .revert_on_unload();
+        register_keybind_with_string("Open search", keybind_handler, "CTRL+SHIFT+F")
+            .revert_on_unload();
     }
-
 }
 
 fn process_clipboard_text() {

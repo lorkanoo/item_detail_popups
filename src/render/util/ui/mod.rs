@@ -19,4 +19,3 @@ pub struct UiLink {
     pub title: String,
     pub href: String,
 }
-

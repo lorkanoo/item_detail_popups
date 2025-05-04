@@ -6,7 +6,7 @@ use enigo::{
     Enigo, Key, Keyboard, Mouse, Settings,
 };
 
-use log::{debug, error, warn};
+use log::{debug, error};
 use serde::{Deserialize, Serialize};
 use std::fmt::Formatter;
 use std::time::Duration;
@@ -89,7 +89,7 @@ pub fn trigger_key_combination(key_combination: &KeyCombination) {
     debug!("[trigger_key_combination] combination: {key_combination:?}");
     let mut enigo = Enigo::new(&Settings::default()).unwrap();
     let mut retries = 75;
-    let should_wait_for_key_release = Addon::read_config().wait_until_all_keys_released.clone();
+    let should_wait_for_key_release = Addon::read_config().wait_until_all_keys_released;
     while should_wait_for_key_release && retries > 0 {
         if all_keys_released() {
             break;

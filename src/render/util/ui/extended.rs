@@ -15,11 +15,11 @@ impl UiExtended for Ui<'_> {
             && mouse_pos.x < bounds_max[0]
             && mouse_pos.y < bounds_max[1]
     }
-    
+
     fn input_color_alpha(&self, ui: &Ui, label: impl AsRef<str>, color: &mut [f32; 4]) -> bool {
-    ColorEdit::new(label, color)
-        .preview(ColorPreview::Alpha)
-        .alpha_bar(true)
-        .build(ui)
+        ColorEdit::new(label, color)
+            .preview(ColorPreview::Alpha)
+            .alpha_bar(true)
+            .build(ui)
     }
 }

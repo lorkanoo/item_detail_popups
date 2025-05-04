@@ -5,7 +5,7 @@ use crate::cache::CachedData;
 use crate::cache::CachingStatus::Cached;
 use chrono::Local;
 
-use log::{debug, error, warn};
+use log::{debug, error};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::thread;

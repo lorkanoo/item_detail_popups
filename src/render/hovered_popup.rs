@@ -18,7 +18,14 @@ impl Context {
                 let width_limit = window_start + 640.0;
 
                 ui.group(|| {
-                    Self::render_popup_data(ui, None, popup, &mut ui_actions, width_limit, &mut self.cache);
+                    Self::render_popup_data(
+                        ui,
+                        None,
+                        popup,
+                        &mut ui_actions,
+                        width_limit,
+                        &mut self.cache,
+                    );
                 });
                 if Addon::read_config().close_on_mouse_away {
                     Self::close_popup_on_mouse_away(ui, &mut ui_actions);

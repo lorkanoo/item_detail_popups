@@ -1,6 +1,6 @@
-use std::thread;
 use crate::{addon::Addon, api::gw2_wiki::prepare_item_popup, context::Context};
 use nexus::imgui::Ui;
+use std::thread;
 
 mod hovered_popup;
 mod options;
@@ -39,11 +39,12 @@ impl Context {
             self.search_text = "".to_string();
             should_focus_input = true;
         }
-        ui.popup(format!("##Search_popup_idp"), || {
-            if (should_focus_input){
+        ui.popup("##Search_popup_idp", || {
+            if should_focus_input {
                 ui.set_keyboard_focus_here();
             }
-            ui.input_text("##search_input_idp", &mut self.search_text).build();
+            ui.input_text("##search_input_idp", &mut self.search_text)
+                .build();
             ui.text_disabled("Press enter to search");
             if ui.is_key_released(nexus::imgui::Key::Enter) {
                 ui.close_current_popup();
@@ -51,11 +52,11 @@ impl Context {
                     Addon::write_context().ui.loading_progress = Some(1);
                     let item_name = Addon::read_context().search_text.clone();
                     Addon::write_context().search_text = "".to_string();
-                    Addon::write_context().ui.hovered_popup = Some(prepare_item_popup(item_name.as_str()));
+                    Addon::write_context().ui.hovered_popup =
+                        Some(prepare_item_popup(item_name.as_str()));
                     Addon::write_context().ui.loading_progress = None;
                 }));
             }
         });
-
     }
 }

@@ -1,7 +1,9 @@
 use nexus::imgui::{Condition, Ui, Window};
 
 use crate::{
-    cache::Cache, context::{ui::popup::Popup, Context}, thread::{open_link_thread, refresh_popup_thread}
+    cache::Cache,
+    context::{ui::popup::Popup, Context},
+    thread::{open_link_thread, refresh_popup_thread},
 };
 
 use super::util::ui::UiAction;
@@ -27,7 +29,7 @@ impl Context {
         ui_actions: &mut Vec<UiAction>,
         popup_vec_index: usize,
         popup: &mut Popup,
-        cache: &mut Cache
+        cache: &mut Cache,
     ) {
         let size = ui.calc_text_size(&popup.data.title);
         let screen_height = ui.io().display_size[1];
@@ -49,7 +51,7 @@ impl Context {
                     popup,
                     ui_actions,
                     *ui.window_pos().first().unwrap() + 640.0,
-                    cache
+                    cache,
                 );
             });
         popup.opened = is_opened;
@@ -75,7 +77,9 @@ impl Context {
                         vec.remove(*i);
                     }
                 }
-                UiAction::Open(ui_link) => open_link_thread(ui_link.href.clone(), ui_link.title.clone()),
+                UiAction::Open(ui_link) => {
+                    open_link_thread(ui_link.href.clone(), ui_link.title.clone())
+                }
                 _ => {}
             }
         }

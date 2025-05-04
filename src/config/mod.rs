@@ -39,7 +39,6 @@ pub struct Config {
     pub wait_until_all_keys_released: bool,
     #[serde(default = "yes")]
     pub close_on_mouse_away: bool,
-
 }
 
 impl Persistent for Config {
