@@ -29,3 +29,17 @@ pub fn extract_item_name(chat_message: &str) -> Result<String, &'static str> {
         _ => Err("Could not extract item name: invalid chat message"),
     }
 }
+
+pub fn shorten_path(path_str: String) -> String {
+    let parts: Vec<&str> = path_str.split(r#"\"#).collect();
+    let last_three: Vec<&str> = parts
+        .iter()
+        .rev()
+        .take(3)
+        .copied()
+        .collect::<Vec<&str>>()
+        .into_iter()
+        .rev()
+        .collect();
+    format!("..\\{}", last_three.join("\\"))
+}

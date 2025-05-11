@@ -83,7 +83,7 @@ pub enum Token {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Style {
     Normal,
-    Highlighted,
+    Bold,
     Disabled,
 }
 

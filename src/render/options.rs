@@ -1,9 +1,15 @@
+use crate::config::{fonts_dir, game_dir};
+use crate::thread::load_fonts;
+use crate::util::shorten_path;
 use crate::{addon::Addon, context::Context};
 use log::debug;
-use nexus::imgui::Ui;
+use nexus::imgui::{MouseButton, Ui};
+use rfd::FileDialog;
+use std::path::PathBuf;
 use std::time::Duration;
-
+use std::borrow::Cow::Borrowed;
 use super::util::ui::extended::UiExtended;
+use std::thread;
 
 const MAX_REFRESH_HOURS: i32 = 10000;
 const MAX_REFRESH_MINUTES: i32 = 59;
@@ -22,14 +28,47 @@ impl Context {
             if let Some(_token) = ui.tab_item("Cache") {
                 self.render_cache_options(ui);
             }
-
             if let Some(_token) = ui.tab_item("Advanced") {
                 self.render_advanced_options(ui);
             }
+            if let Some(_token) = ui.tab_item("Help") {
+                self.render_help(ui);
+            }
+
         }
+
+    }
+
+    fn render_help(&mut self, ui: &Ui) {
+        ui.text("This addon requires english in-game language to detect items properly.");
+        ui.text("To ask questions / report issues visit");
+        ui.link("https://discord.com/channels/410828272679518241/1321117612209602601", "discord", Addon::read_config().link_color, true);
+        ui.text("channel.");
+        ui.text("Please make sure to read ");
+        ui.link("https://github.com/lorkanoo/item_detail_popups", "usage guide", Addon::read_config().link_color, true);
+        ui.text("in case of any problems.");
+    }
+
+    fn render_bold_font_options(&mut self, ui: &Ui) {
+        ui.text("Bold font:");
+        if ui.font_select("##bold_font_idp", &mut self.bold_font) {
+            if let Some(font) = self.bold_font {
+                unsafe {
+                    if let Ok(font_name) = font.name_raw().to_str() {
+                        Addon::write_config().selected_bold_font_name = Some(font_name.to_string());
+                    }
+                }
+            }
+        }
+        ui.same_line();
+        if ui.button("Reload##idp") {
+            load_fonts();
+        }
+        ui.text_disabled("Place fonts under 'addons/item_detail_popups/fonts'.");
     }
 
     fn render_style_options(&mut self, ui: &Ui) {
+        self.render_bold_font_options(ui);
         ui.text("Link color:");
         ui.input_color_alpha(
             ui,
@@ -64,6 +103,15 @@ impl Context {
             "Close popup when mouse moves away##idp",
             &mut Addon::write_config().close_on_mouse_away,
         );
+        ui.checkbox(
+            "Allow collapsing popups##idp",
+            &mut Addon::write_config().allow_collapsing_popups,
+        );
+        ui.checkbox(
+            "Pin on tab hover##idp",
+            &mut Addon::write_config().auto_pin_on_tab_hover,
+        );
+
     }
 
     fn render_cache_options(&mut self, ui: &Ui) {

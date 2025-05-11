@@ -10,6 +10,7 @@ use nexus::imgui::MenuItem;
 use nexus::imgui::{sys, ChildWindow, MouseButton, Ui};
 use std::ptr;
 use util::ui::UiLink;
+use crate::context::Font;
 
 use super::util;
 use std::thread;
@@ -27,6 +28,7 @@ impl Context {
         ui_actions: &mut Vec<UiAction>,
         width_limit: f32,
         cache: &mut Cache,
+        bold_font: &Option<Font>
     ) {
         if !popup.pinned {
             ui.text(&popup.data.title);
@@ -37,10 +39,10 @@ impl Context {
         }
         if popup.data.is_not_empty() {
             if let Some(_token) = ui.tab_bar(format!("tabs##rps{}", popup.id)) {
-                Self::render_general_tab(ui, popup, ui_actions, width_limit, cache);
-                Self::render_acquisition_tab(ui, popup, ui_actions, width_limit, cache);
-                Self::render_notes_tab(ui, popup, ui_actions, width_limit, cache);
-                Self::render_images_tab(ui, popup, cache);
+                Self::render_general_tab(ui, pinned_popup_vec_index, popup, ui_actions, width_limit, cache, bold_font);
+                Self::render_acquisition_tab(ui, pinned_popup_vec_index, popup, ui_actions, width_limit, cache, bold_font);
+                Self::render_notes_tab(ui, pinned_popup_vec_index, popup, ui_actions, width_limit, cache, bold_font);
+                Self::render_images_tab(ui, pinned_popup_vec_index, popup, ui_actions, cache);
             }
         }
         Self::render_button_ribbon(ui, pinned_popup_vec_index, popup, ui_actions);
@@ -48,15 +50,20 @@ impl Context {
 
     fn render_general_tab(
         ui: &Ui<'_>,
+        pinned_popup_vec_index: Option<usize>,
         popup: &mut Popup,
         ui_actions: &mut Vec<UiAction>,
         width_limit: f32,
         cache: &mut Cache,
+        bold_font: &Option<Font>
     ) {
         if Addon::read_config().show_general_tab
             && (!popup.data.description.is_empty() || popup.data.item_ids.is_some())
         {
             if let Some(_token) = ui.tab_item(format!("General##rps{}", popup.id)) {
+                if ui.is_item_hovered() && pinned_popup_vec_index.is_none() && Addon::read_config().auto_pin_on_tab_hover {
+                    Self::pin_popup(ui, popup, ui_actions);
+                }
                 if !popup.data.description.is_empty() {
                     Self::render_tokens(
                         ui,
@@ -65,6 +72,7 @@ impl Context {
                         ui_actions,
                         width_limit,
                         cache,
+                        bold_font
                     );
                     ui.new_line();
                 }
@@ -73,15 +81,21 @@ impl Context {
         }
     }
 
+
     fn render_acquisition_tab(
         ui: &Ui<'_>,
+        pinned_popup_vec_index: Option<usize>,
         popup: &mut Popup,
         ui_actions: &mut Vec<UiAction>,
         width_limit: f32,
         cache: &mut Cache,
+        bold_font: &Option<Font>
     ) {
         if Addon::read_config().show_acquisition_tab && !popup.data.acquisition.is_empty() {
             if let Some(_token) = ui.tab_item(format!("Acquisition##rps{}", popup.id)) {
+                if ui.is_item_hovered() && pinned_popup_vec_index.is_none() && Addon::read_config().auto_pin_on_tab_hover {
+                    Self::pin_popup(ui, popup, ui_actions);
+                }
                 let mut render_func = || {
                     Self::render_tokens(
                         ui,
@@ -90,6 +104,7 @@ impl Context {
                         ui_actions,
                         width_limit,
                         cache,
+                        bold_font
                     );
                 };
                 if popup.data.acquisition.len() > TEXT_WRAP_LIMIT {
@@ -112,13 +127,18 @@ impl Context {
 
     fn render_notes_tab(
         ui: &Ui<'_>,
+        pinned_popup_vec_index: Option<usize>,
         popup: &mut Popup,
         ui_actions: &mut Vec<UiAction>,
         width_limit: f32,
         cache: &mut Cache,
+        bold_font: &Option<Font>
     ) {
         if Addon::read_config().show_notes_tab && !popup.data.notes.is_empty() {
             if let Some(_token) = ui.tab_item(format!("Notes##rps{}", popup.id)) {
+                if ui.is_item_hovered() && pinned_popup_vec_index.is_none() && Addon::read_config().auto_pin_on_tab_hover {
+                    Self::pin_popup(ui, popup, ui_actions);
+                }
                 let screen_height = ui.io().display_size[1];
                 let mut render_func = || {
                     Self::render_tokens(
@@ -128,6 +148,7 @@ impl Context {
                         ui_actions,
                         width_limit,
                         cache,
+                        bold_font
                     );
                 };
                 if popup.data.notes.len() > TEXT_WRAP_LIMIT {
@@ -147,11 +168,20 @@ impl Context {
         }
     }
 
-    fn render_images_tab(ui: &Ui<'_>, popup: &mut Popup, cache: &mut Cache) {
+    fn render_images_tab(
+        ui: &Ui<'_>, 
+        pinned_popup_vec_index: Option<usize>,
+        popup: &mut Popup,
+        ui_actions: &mut Vec<UiAction>,
+        cache: &mut Cache
+    ) {
         if !Addon::read_config().show_images_tab || popup.data.images.is_empty() {
             return;
         }
         if let Some(_token) = ui.tab_item(format!("Images##rps{}", popup.id)) {
+            if ui.is_item_hovered() && pinned_popup_vec_index.is_none() && Addon::read_config().auto_pin_on_tab_hover {
+                Self::pin_popup(ui, popup, ui_actions);
+            }
             let mut render_func = || {
                 for token in &popup.data.images {
                     match token {
@@ -276,6 +306,7 @@ impl Context {
         ui_actions: &mut Vec<UiAction>,
         width_limit: f32,
         cache: &mut Cache,
+        bold_font: &Option<Font>
     ) {
         let style = ui.push_style_var(nexus::imgui::StyleVar::ItemSpacing([0.0, 5.0]));
         ui.spacing();
@@ -294,7 +325,7 @@ impl Context {
                     continue;
                 }
                 Token::Text(text, style) => {
-                    Self::render_text(ui, text, style, current_indent, width_limit);
+                    Self::render_text(ui, text, style, current_indent, width_limit, bold_font);
                 }
                 Token::Tag(tag_params) => {
                     Self::render_tag(
@@ -345,7 +376,7 @@ impl Context {
         }
     }
 
-    fn render_text(ui: &Ui, text: &str, style: &Style, current_indent: i32, width_limit: f32) {
+    fn render_text(ui: &Ui, text: &str, style: &Style, current_indent: i32, width_limit: f32, bold_font: &Option<Font>) {
         Self::render_words(
             ui,
             text,
@@ -353,7 +384,15 @@ impl Context {
             width_limit,
             |ui, word| match style {
                 Style::Normal => ui.text(word),
-                Style::Highlighted => ui.text_colored(HIGHLIGHT_COLOR, word),
+                Style::Bold => {
+                    if let Some(bold_font) = bold_font {
+                        let token = bold_font.push();
+                        ui.text(word);
+                        drop(token);
+                    } else {
+                        ui.text_colored(HIGHLIGHT_COLOR, word);
+                    }
+                },
                 Style::Disabled => ui.text_disabled(word),
             },
         );
@@ -504,6 +543,10 @@ impl Context {
         let tag_iterator = popup.data.tags.iter_mut().enumerate().peekable();
         if tag_iterator.len() > 0 {
             for (_, tag) in tag_iterator {
+                let cursor_pos: [f32; 2] = ui.cursor_screen_pos();
+                if *cursor_pos.first().unwrap() > width_limit {
+                    ui.new_line();
+                }
                 ui.text_colored(Addon::read_config().link_color, format!("[{}]", tag.1));
                 if ui.is_item_hovered() && ui.is_mouse_released(MouseButton::Left) && popup.pinned {
                     ui_actions.push(UiAction::Open(UiLink {
@@ -512,10 +555,6 @@ impl Context {
                     }));
                 }
                 ui.same_line();
-                let cursor_pos: [f32; 2] = ui.cursor_screen_pos();
-                if *cursor_pos.first().unwrap() > width_limit {
-                    ui.new_line();
-                }
             }
             ui.new_line();
         }

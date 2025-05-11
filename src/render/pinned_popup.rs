@@ -1,9 +1,8 @@
 use nexus::imgui::{Condition, Ui, Window};
+use crate::context::Font;
 
 use crate::{
-    cache::Cache,
-    context::{ui::popup::Popup, Context},
-    thread::{open_link_thread, refresh_popup_thread},
+    addon::Addon, cache::Cache, context::{ui::popup::Popup, Context}, thread::{open_link_thread, refresh_popup_thread}
 };
 
 use super::util::ui::UiAction;
@@ -12,7 +11,7 @@ impl Context {
     pub fn render_pinned_popups(&mut self, ui: &Ui) {
         let mut ui_actions = vec![];
         for (i, popup) in self.ui.pinned_popups.iter_mut().enumerate() {
-            Self::render_pinned_popup(ui, &mut ui_actions, i, popup, &mut self.cache);
+            Self::render_pinned_popup(ui, &mut ui_actions, i, popup, &mut self.cache, &self.bold_font);
         }
         self.process_pinned_popups_actions(ui_actions);
     }
@@ -30,13 +29,14 @@ impl Context {
         popup_vec_index: usize,
         popup: &mut Popup,
         cache: &mut Cache,
+        bold_font: &Option<Font>
     ) {
         let size = ui.calc_text_size(&popup.data.title);
         let screen_height = ui.io().display_size[1];
         let mut is_opened = popup.opened;
         Window::new(format!("{}##idp{}", popup.data.title.clone(), popup.id))
             .position(popup.pos.unwrap_or([0.0, 0.0]), Condition::Appearing)
-            .collapsible(false)
+            .collapsible(Addon::read_config().allow_collapsing_popups)
             .always_auto_resize(true)
             .save_settings(false)
             .opened(&mut is_opened)
@@ -52,6 +52,7 @@ impl Context {
                     ui_actions,
                     *ui.window_pos().first().unwrap() + 640.0,
                     cache,
+                    bold_font
                 );
             });
         popup.opened = is_opened;

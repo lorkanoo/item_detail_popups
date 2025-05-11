@@ -13,6 +13,7 @@ const DEFAULT_POPUP_DATA_CACHE_EXPIRATION_SECS: u64 = 36 * 3600;
 const DEFAULT_MAX_POPUP_DATA_CACHE_ELEMENTS: usize = 300;
 const DEFAULT_PRICE_EXPIRATION_DURATION: Duration = Duration::from_secs(60);
 const DEFAULT_TEXTURE_EXPIRATION_DURATION: Duration = Duration::from_secs(7 * 24 * 60 * 60);
+const DEFAULT_BOLD_FONT_NAME: &str = "IDP_default_bold";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
@@ -23,6 +24,8 @@ pub struct Config {
     pub max_texture_expiration_duration: Duration,
     #[serde(default = "default_price_expiration")]
     pub max_price_expiration_duration: Duration,
+    #[serde(default = "default_bold_font_name")]
+    pub selected_bold_font_name: Option<String>,
     #[serde(default = "default_link_color")]
     pub link_color: [f32; 4],
     #[serde(default = "yes")]
@@ -39,6 +42,12 @@ pub struct Config {
     pub wait_until_all_keys_released: bool,
     #[serde(default = "yes")]
     pub close_on_mouse_away: bool,
+    #[serde(default = "no")]
+    pub allow_collapsing_popups: bool,
+    #[serde(default = "yes")]
+    pub auto_pin_on_tab_hover: bool,
+
+
 }
 
 impl Persistent for Config {
@@ -88,6 +97,7 @@ impl Default for Config {
             ),
             max_price_expiration_duration: DEFAULT_PRICE_EXPIRATION_DURATION,
             max_texture_expiration_duration: DEFAULT_TEXTURE_EXPIRATION_DURATION,
+            selected_bold_font_name: default_bold_font_name(),
             link_color: default_link_color(),
             show_general_tab: yes(),
             show_acquisition_tab: yes(),
@@ -96,6 +106,8 @@ impl Default for Config {
             show_tag_bar: yes(),
             wait_until_all_keys_released: yes(),
             close_on_mouse_away: yes(),
+            allow_collapsing_popups: no(),
+            auto_pin_on_tab_hover: yes()
         }
     }
 }
@@ -114,6 +126,12 @@ pub fn textures_dir() -> PathBuf {
     result
 }
 
+pub fn fonts_dir() -> PathBuf {
+    let mut result = config_dir();
+    result.push("fonts");
+    result
+}
+
 pub fn game_dir() -> PathBuf {
     get_game_dir().expect("invalid game directory")
 }
@@ -126,8 +144,17 @@ fn default_price_expiration() -> Duration {
     DEFAULT_PRICE_EXPIRATION_DURATION
 }
 
+fn default_bold_font_name() -> Option<String> {
+    Some(DEFAULT_BOLD_FONT_NAME.to_string())
+}
+
+
 fn default_link_color() -> [f32; 4] {
     [0.2, 0.4, 0.8, 1.0]
+}
+
+fn no() -> bool {
+    false
 }
 
 fn yes() -> bool {

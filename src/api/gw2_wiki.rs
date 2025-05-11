@@ -3,7 +3,7 @@ use crate::api::get_sync;
 use crate::cache::texture::identifier_to_filename;
 use crate::cache::Cacheable;
 use crate::config::textures_dir;
-use crate::context::ui::popup::Style::{Highlighted, Normal};
+use crate::context::ui::popup::Style::{Bold, Normal};
 use crate::context::ui::popup::{Popup, PopupData, Style, TagParams, Token};
 use ego_tree::NodeRef;
 use log::{debug, error, info};
@@ -42,8 +42,6 @@ pub fn prepare_item_popup(item_name: &str) -> Popup {
                 .cache
                 .popup_data_map
                 .store(&item_name_href, &mut popup.data);
-            popup.data.item_ids = popup.data.item_ids.clone();
-            popup.data.title = popup.data.title.clone();
             return popup;
         }
     }
@@ -441,7 +439,7 @@ fn parse_node(
                 }
             }
         } else if matches!(element.value().name(), "a" | "b") {
-            *style = Highlighted;
+            *style = Bold;
         } else if element.value().name() == "ul" {
             *indent_depth += 1;
             tokens.push(Token::Indent(*indent_depth));

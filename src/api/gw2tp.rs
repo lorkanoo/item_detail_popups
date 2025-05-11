@@ -27,7 +27,7 @@ pub fn fetch_item_names_thread() {
         debug!("[fetch_item_names_thread] started");
         let date = Addon::read_context().cache.item_names.date();
         if !is_cache_expired(ITEM_NAMES_CACHE_EXPIRATION, date) {
-            info!("[fetch_item_names_thread] cache is up to date");
+            debug!("[fetch_item_names_thread] cache is up to date");
             return;
         }
 
