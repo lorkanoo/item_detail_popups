@@ -60,10 +60,11 @@ impl Context {
         if Addon::read_config().show_general_tab
             && (!popup.data.description.is_empty() || popup.data.item_ids.is_some())
         {
-            if let Some(_token) = ui.tab_item(format!("General##rps{}", popup.id)) {
-                if ui.is_item_hovered() && pinned_popup_vec_index.is_none() && Addon::read_config().auto_pin_on_tab_hover {
-                    Self::pin_popup(ui, popup, ui_actions);
-                }
+            let token = ui.tab_item(format!("General##rps{}", popup.id));
+            if ui.is_item_hovered() && pinned_popup_vec_index.is_none() && Addon::read_config().auto_pin_on_tab_hover {
+                Self::pin_popup(ui, popup, ui_actions);
+            }
+            if token.is_some() {
                 if !popup.data.description.is_empty() {
                     Self::render_tokens(
                         ui,
@@ -92,10 +93,11 @@ impl Context {
         bold_font: &Option<Font>
     ) {
         if Addon::read_config().show_acquisition_tab && !popup.data.acquisition.is_empty() {
-            if let Some(_token) = ui.tab_item(format!("Acquisition##rps{}", popup.id)) {
-                if ui.is_item_hovered() && pinned_popup_vec_index.is_none() && Addon::read_config().auto_pin_on_tab_hover {
-                    Self::pin_popup(ui, popup, ui_actions);
-                }
+            let token = ui.tab_item(format!("Acquisition##rps{}", popup.id));
+            if ui.is_item_hovered() && pinned_popup_vec_index.is_none() && Addon::read_config().auto_pin_on_tab_hover {
+                Self::pin_popup(ui, popup, ui_actions);
+            }
+            if token.is_some() {
                 let mut render_func = || {
                     Self::render_tokens(
                         ui,
@@ -135,10 +137,11 @@ impl Context {
         bold_font: &Option<Font>
     ) {
         if Addon::read_config().show_notes_tab && !popup.data.notes.is_empty() {
-            if let Some(_token) = ui.tab_item(format!("Notes##rps{}", popup.id)) {
-                if ui.is_item_hovered() && pinned_popup_vec_index.is_none() && Addon::read_config().auto_pin_on_tab_hover {
-                    Self::pin_popup(ui, popup, ui_actions);
-                }
+            let token = ui.tab_item(format!("Notes##rps{}", popup.id));
+            if ui.is_item_hovered() && pinned_popup_vec_index.is_none() && Addon::read_config().auto_pin_on_tab_hover {
+                Self::pin_popup(ui, popup, ui_actions);
+            }
+            if token.is_some() {
                 let screen_height = ui.io().display_size[1];
                 let mut render_func = || {
                     Self::render_tokens(
@@ -178,10 +181,11 @@ impl Context {
         if !Addon::read_config().show_images_tab || popup.data.images.is_empty() {
             return;
         }
-        if let Some(_token) = ui.tab_item(format!("Images##rps{}", popup.id)) {
-            if ui.is_item_hovered() && pinned_popup_vec_index.is_none() && Addon::read_config().auto_pin_on_tab_hover {
-                Self::pin_popup(ui, popup, ui_actions);
-            }
+        let token = ui.tab_item(format!("Images##rps{}", popup.id));
+        if ui.is_item_hovered() && pinned_popup_vec_index.is_none() && Addon::read_config().auto_pin_on_tab_hover {
+            Self::pin_popup(ui, popup, ui_actions);
+        }
+        if token.is_some() {
             let mut render_func = || {
                 for token in &popup.data.images {
                     match token {

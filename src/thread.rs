@@ -148,6 +148,7 @@ fn clean_expired_textures() {
 pub fn load_fonts() {
     let bold_font_bytes = include_bytes!("../fonts/default_bold.ttf");
     let mut bold_font_path = fonts_dir();
+    let _ = fs::create_dir(&bold_font_path);
     bold_font_path.push("../fonts/default_bold.ttf");
     if !bold_font_path.exists() {
         let mut bold_font_file = File::create(&bold_font_path).expect("Couldn't create a bold font file.");
