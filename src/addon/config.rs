@@ -2,12 +2,12 @@ use crate::{
     addon::{Addon, MULTITHREADED_ADDON},
     config::Config,
 };
-use log::debug;
+use log::trace;
 use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::thread;
 impl Addon {
     pub fn write_config() -> RwLockWriteGuard<'static, Config> {
-        debug!(
+        trace!(
             "[write_config] Acquiring lock (thread {:?})",
             thread::current().id()
         );
@@ -16,7 +16,7 @@ impl Addon {
             .get_or_init(|| RwLock::new(Config::default()))
             .write()
             .unwrap();
-        debug!(
+        trace!(
             "[write_config] Lock acquired (thread {:?})",
             thread::current().id()
         );
@@ -24,7 +24,7 @@ impl Addon {
     }
 
     pub fn read_config() -> RwLockReadGuard<'static, Config> {
-        debug!(
+        trace!(
             "[read_config] Acquiring lock (thread {:?})",
             thread::current().id()
         );
@@ -33,7 +33,7 @@ impl Addon {
             .get_or_init(|| RwLock::new(Config::default()))
             .read()
             .unwrap();
-        debug!(
+        trace!(
             "[read_config] Lock acquired (thread {:?})",
             thread::current().id()
         );

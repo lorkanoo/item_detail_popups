@@ -3,19 +3,27 @@ use crate::api::get_sync;
 use crate::cache::texture::identifier_to_filename;
 use crate::cache::Cacheable;
 use crate::config::textures_dir;
-use crate::context::ui::popup::Style::{Bold, Normal};
-use crate::context::ui::popup::{Popup, PopupData, Style, TagParams, Token};
+use crate::context::ui::popup::style::Style::{self, Bold, Normal};
 use ego_tree::NodeRef;
-use log::{debug, error, info};
+use crate::context::ui::popup::token::Token;
+use log::{debug, error, info, trace};
 use scraper::{CaseSensitivity, ElementRef, Html, Node, Selector};
 use std::fs::{self, File};
 use std::io::copy;
 use std::ops::Deref;
+use crate::context::ui::popup::Popup;
+use crate::context::ui::popup::tag_params::TagParams;
+use crate::context::ui::popup::popup_data::PopupData;
+use crate::context::ui::popup::dimensions::Dimensions;
 
 const GW2_WIKI_URL: &str = "https://wiki.guildwars2.com";
+const NO_INDENTATION: i32 = -1;
 
 pub fn href_to_wiki_url(href: &String) -> String {
-    format!("{}{}", GW2_WIKI_URL, href)
+    debug!("[href_to_wiki_url] Formatting {href}");
+    let mut result = format!("{}{}", GW2_WIKI_URL, href.replace('"', "%22"));
+    debug!("[href_to_wiki_url] Result {result}");
+    result
 }
 
 pub fn prepare_item_popup(item_name: &str) -> Popup {
@@ -62,7 +70,7 @@ pub fn download_wiki_image(href: &String) -> Result<(), ureq::Error> {
             let _ = fs::create_dir(&path);
             path.push(identifier_to_filename(href));
 
-            info!(
+            debug!(
                 "[download_wiki_image] Saving image to \"{}\"",
                 path.display()
             );
@@ -170,7 +178,9 @@ pub fn fill_wiki_details(href: &String, popup: &mut Popup) -> bool {
 
                 fill_tags(&document, popup);
                 fill_description(&document, popup);
+                fill_getting_there(&document, popup);
                 fill_acquisition(&document, popup);
+                fill_contents(&document, popup);
                 fill_notes(&document, popup);
                 fill_images(&document, popup);
                 true
@@ -209,6 +219,7 @@ fn skip_to_element<'a>(
     element_name: &str,
 ) -> Option<NodeRef<'a, Node>> {
     while let Some(node) = next_elem {
+        trace!("[skip_to_element] loop");
         if let Some(text) = node.value().as_text() {
             if process_text(text).is_empty() {
                 next_elem = node.next_sibling();
@@ -233,6 +244,23 @@ fn skip_to_element<'a>(
     None
 }
 
+fn next_sibling_of_names<'a>(
+    mut next_elem: Option<NodeRef<'a, Node>>,
+    element_names: Vec<&str>,
+) -> Option<NodeRef<'a, Node>> {
+    while let Some(node) = next_elem {
+        trace!("[next_sibling_of_name] loop");
+        if let Some(element) = ElementRef::wrap(node) {
+            if element_names.contains(&element.value().name()) {
+                return Some(node);
+            }
+        }
+        next_elem = node.next_sibling();
+        continue;
+    }
+    None
+}
+
 fn fill_description(document: &Html, popup: &mut Popup) {
     let description_start_selector = Selector::parse(
         "div.mw-parser-output > p:not(:has(.wikipopup, script, small)):not(.mw-empty-elt)",
@@ -244,15 +272,16 @@ fn fill_description(document: &Html, popup: &mut Popup) {
         if skip_to_element(start.next_sibling(), "h3").is_some() {
             return;
         }
-        parse_node(&mut description, *start.deref(), &mut Normal, &mut -1);
+        parse_node(&mut description, *start.deref());
         let mut next = start.next_sibling();
         while let Some(node) = next {
+            trace!("[fill_description] loop");
             if let Some(element) = ElementRef::wrap(node) {
                 let tag_name = element.value().name();
                 if tag_name != "dl" && tag_name != "ul" {
                     break;
                 }
-                parse_node(&mut description, node, &mut Normal, &mut -1);
+                parse_node(&mut description, node);
             }
             next = node.next_sibling();
         }
@@ -260,51 +289,103 @@ fn fill_description(document: &Html, popup: &mut Popup) {
     popup.data.description = description;
 }
 
-fn fill_acquisition(document: &Html, popup: &mut Popup) {
-    let acquisition_start_selector = Selector::parse("h2:has(#Acquisition)").unwrap();
-    let mut acquisition: Vec<Token> = vec![];
-    if let Some(start) = document.select(&acquisition_start_selector).next() {
-        let mut next = start.next_sibling();
+fn fill_getting_there(doc: &Html, popup: &mut Popup) {
+    if let Some(doc_pos) = doc.select(
+        &Selector::parse("h2:has(#Getting_there)").unwrap()
+    ).next() {
+        let mut next = doc_pos.next_sibling();
         while let Some(node) = next {
-            if let Some(node) = skip_to_element(Some(node), "h3") {
-                parse_node(&mut acquisition, node, &mut Normal, &mut -1);
-                next = node.next_sibling();
-                if let Some(div_node) = skip_to_element(node.next_sibling(), "div") {
-                    parse_node(&mut acquisition, div_node, &mut Normal, &mut -1);
-                    next = div_node.next_sibling();
-                    continue;
+            trace!("[fill_getting_there] loop");
+            if let Some(element) = ElementRef::wrap(node) {
+                let tag_name = element.value().name();
+                if !["dl", "ul", "p", "div", "h3", "table"].contains(&tag_name) {
+                    break;
                 }
-            } else if let Some(node) = skip_to_element(Some(node), "ul") {
-                parse_node(&mut acquisition, node, &mut Normal, &mut -1);
-                next = node.next_sibling();
-            } else if let Some(node) = skip_to_element(Some(node), "table") {
-                parse_node(&mut acquisition, node, &mut Normal, &mut -1);
-                next = node.next_sibling();
-            } else {
-                break;
+                parse_node(&mut popup.data.getting_there, node);
             }
+            next = node.next_sibling();
         }
     }
-    popup.data.acquisition = acquisition;
+}
+
+fn fill_contents(doc: &Html, popup: &mut Popup) {
+    if let Some(doc_pos) = doc.select(
+        &Selector::parse("h2:has(#Contents)").unwrap()
+    ).next() {
+        let mut next = doc_pos.next_sibling();
+        while let Some(node) = next {
+            trace!("[fill_contents] loop");
+            if let Some(element) = ElementRef::wrap(node) {
+                let tag_name = element.value().name();
+                if !["dl", "ul", "p", "div", "h3", "table"].contains(&tag_name) {
+                    break;
+                }
+                parse_node(&mut popup.data.contents, node);
+            }
+            next = node.next_sibling();
+        }
+    }
+}
+
+
+fn fill_acquisition(doc: &Html, popup: &mut Popup) {
+    if let Some(doc_pos) = doc.select(
+        &Selector::parse("h2:has(#Acquisition)").unwrap()
+    ).next() {
+        let mut next = doc_pos.next_sibling();
+        while let Some(node) = next {
+            trace!("[fill_acquisition] loop");
+            if let Some(element) = ElementRef::wrap(node) {
+                let tag_name = element.value().name();
+                if !["dl", "ul", "p", "div", "h3", "table"].contains(&tag_name) {
+                    break;
+                }
+                parse_node(&mut popup.data.acquisition, node);
+            }
+            next = node.next_sibling();
+        }
+
+        // let mut next = start.next_sibling();
+        // while let Some(node) = next {
+        //     trace!("[fill_acquisition] loop");
+        //     if let Some(node) = skip_to_element(Some(node), "h3") {
+        //         parse_node(&mut acquisition, node);
+        //         next = node.next_sibling();
+        //         if let Some(div_node) = skip_to_element(node.next_sibling(), "div") {
+        //             parse_node(&mut acquisition, div_node);
+        //             next = div_node.next_sibling();
+        //             continue;
+        //         }
+        //     } else if let Some(node) = skip_to_element(Some(node), "ul") {
+        //         parse_node(&mut acquisition, node);
+        //         next = node.next_sibling();
+        //     } else if let Some(node) = skip_to_element(Some(node), "table") {
+        //         parse_node(&mut acquisition, node);
+        //         next = node.next_sibling();
+        //     } else {
+        //         break;
+        //     }
+        // }
+    }
 }
 
 fn fill_notes(document: &Html, popup: &mut Popup) {
     let notes_start_selector = Selector::parse("h2:has(#Notes) + ul").unwrap();
     let mut notes: Vec<Token> = vec![];
     if let Some(start) = document.select(&notes_start_selector).next() {
-        parse_node(&mut notes, *start.deref(), &mut Normal, &mut -1);
+        parse_node(&mut notes, *start.deref());
         let next = start.next_sibling();
         if let Some(node) = skip_to_element(next, "blockquote") {
-            parse_node(&mut notes, node, &mut Normal, &mut -1);
+            parse_node(&mut notes, node);
         } else if let Some(node) = skip_to_element(next, "table") {
-            parse_node(&mut notes, node, &mut Normal, &mut -1);
+            parse_node(&mut notes, node);
         }
     }
     popup.data.notes = notes;
 }
 
 fn fill_images(document: &Html, popup: &mut Popup) {
-    let images_start_selector = Selector::parse(".infobox table img").unwrap();
+    let images_start_selector = Selector::parse(".infobox table img, .gallery img").unwrap();
     let mut images: Vec<Token> = vec![];
     let img_elements = document.select(&images_start_selector);
     for img in img_elements {
@@ -312,7 +393,7 @@ fn fill_images(document: &Html, popup: &mut Popup) {
         if href.is_none() {
             continue;
         }
-        images.push(Token::Image(href.unwrap().to_string()));
+        images.push(Token::Image(href.unwrap().to_string(), None));
         if let Some(parent) = img.parent() {
             if let Some(next_sibling) = parent.next_sibling() {
                 let element = ElementRef::wrap(next_sibling);
@@ -330,6 +411,8 @@ fn fill_images(document: &Html, popup: &mut Popup) {
     }
     popup.data.images = images;
 }
+
+
 
 // result: href, title
 pub fn special_search(item_id: Option<u32>, href: &String) -> Option<(String, String)> {
@@ -366,7 +449,6 @@ pub fn special_search(item_id: Option<u32>, href: &String) -> Option<(String, St
                 let item_selector_alternative =
                     Selector::parse(selector_alternative.as_str()).unwrap();
                 if let Some(tag_element) = document.select(&item_selector_alternative).next() {
-                    info!("tag element found {tag_element:?}");
                     let mut result: (String, String) = ("".to_string(), "".to_string());
                     if let Some(href) = tag_element.value().attr("href") {
                         result.0 = href.split("#").next().unwrap_or("").to_string();
@@ -392,7 +474,15 @@ pub fn special_search(item_id: Option<u32>, href: &String) -> Option<(String, St
 }
 
 fn parse_node(
-    tokens: &mut Vec<Token>,
+    result: &mut Vec<Token>,
+    node: NodeRef<Node>,
+) {
+    parse_node_with_style(result, node, &mut Normal, &mut NO_INDENTATION);
+}
+
+
+fn parse_node_with_style(
+    result: &mut Vec<Token>,
     node: NodeRef<Node>,
     style: &mut Style,
     indent_depth: &mut i32,
@@ -402,8 +492,8 @@ fn parse_node(
         let mut children_iterator = element.children();
         if matches!(element.value().name(), "script" | "sup" | "style" | "table") {
             if element.value().name() == "table" {
-                tokens.push(Token::Spacing);
-                tokens.push(Token::Text(
+                result.push(Token::Spacing);
+                result.push(Token::Text(
                     "(open wiki to see the table)".to_string(),
                     Style::Disabled,
                 ));
@@ -425,44 +515,57 @@ fn parse_node(
         }
         if let Some(href) = element.value().attr("href") {
             if let Some(child) = children_iterator.next() {
+                let child_el = ElementRef::wrap(child);
+                if let Some(child_el) = child_el {
+                    if let Some(src) = child_el.value().attr("src") {
+                        result.push(Token::Image(src.to_string(), Some(Dimensions::small())));
+                    }
+                } 
                 if let Some(text) = child.value().as_text() {
                     let text = process_text(&text.text);
                     let mut title = text.clone();
                     if let Some(title_attr) = element.value().attr("title") {
                         title = process_text(title_attr);
                     }
-                    tokens.push(Token::Tag(TagParams {
+                    result.push(Token::Tag(TagParams {
                         href: href.split("#").next().unwrap_or("").to_string(),
                         text,
                         title,
                     }));
                 }
             }
-        } else if matches!(element.value().name(), "a" | "b") {
-            *style = Bold;
-        } else if element.value().name() == "ul" {
-            *indent_depth += 1;
-            tokens.push(Token::Indent(*indent_depth));
-        } else if element.value().name() == "li" {
-            tokens.push(Token::ListElement)
-        } else if matches!(element.value().name(), "dt" | "h3") {
-            tokens.push(Token::Spacing)
+        } else {
+            match element.value().name() {
+                "a" | "b" => *style = Bold,
+                "ul" => {
+                    *indent_depth += 1;
+                    result.push(Token::Indent(*indent_depth));
+                },
+                "li" => result.push(Token::ListElement),
+                "dt" | "h3" | "dl" => result.push(Token::Spacing),
+                "img" => {
+                    if let Some(src) = element.value().attr("src") {
+                        result.push(Token::Image(src.to_string(), Some(Dimensions::small())));
+                    }
+                }
+                _ => {}
+            }
         }
 
         for child in children_iterator {
-            parse_node(tokens, child, style, indent_depth);
+            parse_node_with_style(result, child, style, indent_depth);
         }
 
         if element.value().name() == "ul" {
             *indent_depth -= 1;
-            tokens.push(Token::Indent(*indent_depth));
+            result.push(Token::Indent(*indent_depth));
         }
         *style = Normal;
     }
     if let Some(text) = node.value().as_text() {
         let processed = process_text(&text.text);
         if !processed.is_empty() {
-            tokens.push(Token::Text(processed, style.clone()));
+            result.push(Token::Text(processed, style.clone()));
         }
     }
 }
@@ -470,7 +573,7 @@ fn parse_node(
 fn process_text(text: &str) -> String {
     let result = text.trim().replace("—", "-").replace("“", "\"").to_string();
     if result == "\"" {
-        return String::new();
+        return "".to_string()
     }
     result
 }

@@ -50,7 +50,10 @@ impl Context {
     }
 
     fn render_bold_font_options(&mut self, ui: &Ui) {
-        ui.text("Bold font:");
+        ui.text("Bold font");
+        ui.same_line();
+        ui.text_disabled(" (place fonts under 'addons/item_detail_popups/fonts')");
+
         if ui.font_select("##bold_font_idp", &mut self.bold_font) {
             if let Some(font) = self.bold_font {
                 unsafe {
@@ -64,7 +67,6 @@ impl Context {
         if ui.button("Reload##idp") {
             load_fonts();
         }
-        ui.text_disabled("Place fonts under 'addons/item_detail_popups/fonts'.");
     }
 
     fn render_style_options(&mut self, ui: &Ui) {
@@ -76,11 +78,24 @@ impl Context {
             &mut Addon::write_config().link_color,
         );
         ui.checkbox(
+            "Use bullet character in list punctuation##idp",
+            &mut Addon::write_config().use_bullet_list_punctuation,
+        );
+        ui.checkbox(
             "Show general tab##idp",
             &mut Addon::write_config().show_general_tab,
         );
         ui.checkbox(
             "Show acquisition tab##idp",
+            &mut Addon::write_config().show_acquisition_tab,
+        );
+        ui.checkbox(
+            "Show contents tab##idp",
+            &mut Addon::write_config().show_contents_tab,
+        );
+
+        ui.checkbox(
+            "Show getting there tab##idp",
             &mut Addon::write_config().show_acquisition_tab,
         );
         ui.checkbox(

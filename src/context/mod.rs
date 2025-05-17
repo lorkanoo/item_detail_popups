@@ -12,6 +12,7 @@ use std::ffi::CStr;
 use std::ptr::NonNull;
 use std::slice;
 use log::info;
+
 #[derive(Clone)]
 pub struct Context {
     pub links: Links,

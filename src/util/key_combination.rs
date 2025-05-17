@@ -108,7 +108,7 @@ pub fn trigger_key_combination(key_combination: &KeyCombination) {
         keys.push(Key::Control);
     }
     if key_combination.shift {
-        keys.push(Key::Shift);
+        keys.push(Key::RShift);
     }
     if key_combination.alt {
         keys.push(Key::Alt);

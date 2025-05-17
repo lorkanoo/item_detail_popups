@@ -50,7 +50,7 @@ impl Context {
                     Some(popup_vec_index),
                     popup,
                     ui_actions,
-                    *ui.window_pos().first().unwrap() + 640.0,
+                    640.0,
                     cache,
                     bold_font
                 );

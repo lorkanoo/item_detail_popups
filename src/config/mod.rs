@@ -29,9 +29,15 @@ pub struct Config {
     #[serde(default = "default_link_color")]
     pub link_color: [f32; 4],
     #[serde(default = "yes")]
+    pub use_bullet_list_punctuation: bool,
+    #[serde(default = "yes")]
     pub show_general_tab: bool,
     #[serde(default = "yes")]
     pub show_acquisition_tab: bool,
+    #[serde(default = "yes")]
+    pub show_getting_there_tab: bool,
+    #[serde(default = "yes")]
+    pub show_contents_tab: bool,
     #[serde(default = "yes")]
     pub show_notes_tab: bool,
     #[serde(default = "yes")]
@@ -99,8 +105,11 @@ impl Default for Config {
             max_texture_expiration_duration: DEFAULT_TEXTURE_EXPIRATION_DURATION,
             selected_bold_font_name: default_bold_font_name(),
             link_color: default_link_color(),
+            use_bullet_list_punctuation: yes(),
             show_general_tab: yes(),
             show_acquisition_tab: yes(),
+            show_getting_there_tab: yes(),
+            show_contents_tab: yes(),
             show_notes_tab: yes(),
             show_images_tab: yes(),
             show_tag_bar: yes(),

@@ -1,4 +1,4 @@
-use crate::context::ui::popup::Popup;
+use popup::Popup;
 
 pub mod popup;
 

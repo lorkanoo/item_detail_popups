@@ -13,9 +13,9 @@ impl Context {
                 popup.opened = true;
             }
             ui.popup("##popup_idp", || {
-                let window_pos = ui.window_pos();
-                let window_start = window_pos.first().unwrap();
-                let width_limit = window_start + 640.0;
+                // let window_pos = ui.window_pos();
+                // let window_start = window_pos.first().unwrap();
+                let width_limit = 640.0;
 
                 ui.group(|| {
                     Self::render_popup_data(

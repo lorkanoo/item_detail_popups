@@ -1,10 +1,10 @@
 use crate::addon::Addon;
 use crate::config::config_dir;
-use crate::context::ui::popup::PopupData;
+use crate::context::ui::popup::popup_data::PopupData;
 
 use super::{is_cache_expired, Cacheable, Persistent};
 use indexmap::IndexMap;
-use log::{debug, info, warn};
+use log::{debug, info, warn, trace};
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
 use std::path::PathBuf;
@@ -82,6 +82,7 @@ impl<'a> Cacheable<'a, PopupDataCache, PopupData, &'a String, &'a mut PopupData>
     fn store(&'a mut self, key: &'a String, value: &'a mut PopupData) {
         let max_popup_data_cache_size = Addon::read_config().max_popup_data_cache_elements;
         while self.len() >= max_popup_data_cache_size {
+            trace!("[store] loop");
             if self.shift_remove_index(0).is_none() {
                 break;
             }
