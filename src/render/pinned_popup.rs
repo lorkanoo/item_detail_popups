@@ -16,11 +16,11 @@ impl Context {
         self.process_pinned_popups_actions(ui_actions);
     }
 
-    pub fn pin_popup(ui: &Ui, popup: &mut Popup, ui_actions: &mut Vec<UiAction>) {
+    pub fn pin_popup(ui: &Ui, popup_pinned: &mut bool, popup_pos: &mut Option<[f32; 2]>, ui_actions: &mut Vec<UiAction>) {
         ui.close_current_popup();
         ui_actions.push(UiAction::Pin);
-        popup.pinned = true;
-        popup.pos = Some(ui.window_pos());
+        *popup_pinned = true;
+        *popup_pos = Some(ui.window_pos());
     }
 
     fn render_pinned_popup(
@@ -34,14 +34,15 @@ impl Context {
         let size = ui.calc_text_size(&popup.data.title);
         let screen_height = ui.io().display_size[1];
         let mut is_opened = popup.opened;
-        Window::new(format!("{}##idp{}", popup.data.title.clone(), popup.id))
+        Window::new(format!("##idp{}", popup.id))
             .position(popup.pos.unwrap_or([0.0, 0.0]), Condition::Appearing)
             .collapsible(Addon::read_config().allow_collapsing_popups)
             .always_auto_resize(true)
             .save_settings(false)
             .opened(&mut is_opened)
+            .title_bar(false)
             .size_constraints(
-                [&size[0] * 1.25, &size[1] * 1.0],
+                [(&size[0] + 40.0 + 24.0) * 1.25, &size[1] * 1.0],
                 [f32::MAX, screen_height * 0.5],
             )
             .build(ui, || {
@@ -55,7 +56,6 @@ impl Context {
                     bold_font
                 );
             });
-        popup.opened = is_opened;
         if !popup.opened {
             ui_actions.push(UiAction::Delete(popup_vec_index));
         }

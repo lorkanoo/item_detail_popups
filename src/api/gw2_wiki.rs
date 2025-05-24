@@ -5,6 +5,7 @@ use crate::cache::Cacheable;
 use crate::config::textures_dir;
 use crate::context::ui::popup::style::Style::{self, Bold, Normal};
 use ego_tree::NodeRef;
+use scraper::selectable::Selectable;
 use crate::context::ui::popup::token::Token;
 use log::{debug, error, info, trace};
 use scraper::{CaseSensitivity, ElementRef, Html, Node, Selector};
@@ -175,7 +176,7 @@ pub fn fill_wiki_details(href: &String, popup: &mut Popup) -> bool {
                 if document.select(&exists_selector).next().is_some() {
                     return false;
                 }
-
+                fill_item_icon(&document, popup);
                 fill_tags(&document, popup);
                 fill_description(&document, popup);
                 fill_getting_there(&document, popup);
@@ -412,7 +413,16 @@ fn fill_images(document: &Html, popup: &mut Popup) {
     popup.data.images = images;
 }
 
-
+fn fill_item_icon(document: &Html, popup: &mut Popup) {
+    let item_icon_selector = Selector::parse(".infobox-icon img").unwrap();
+    if let Some(img) = document.select(&item_icon_selector).next() {
+        let href = img.attr("src");
+        if href.is_none() {
+            return;
+        }
+        popup.data.item_icon = Some(Token::Image(href.unwrap().to_string(), Some(Dimensions::medium())));
+    }
+}
 
 // result: href, title
 pub fn special_search(item_id: Option<u32>, href: &String) -> Option<(String, String)> {

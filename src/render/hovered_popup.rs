@@ -13,8 +13,6 @@ impl Context {
                 popup.opened = true;
             }
             ui.popup("##popup_idp", || {
-                // let window_pos = ui.window_pos();
-                // let window_start = window_pos.first().unwrap();
                 let width_limit = 640.0;
 
                 ui.group(|| {
@@ -32,7 +30,7 @@ impl Context {
                     Self::close_popup_on_mouse_away(ui, &mut ui_actions);
                 }
                 if ui.is_item_clicked() && !popup.pinned {
-                    Self::pin_popup(ui, popup, &mut ui_actions);
+                    Self::pin_popup(ui, &mut popup.pinned, &mut popup.pos, &mut ui_actions);
                 }
             });
         }

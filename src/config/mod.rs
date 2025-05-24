@@ -3,11 +3,14 @@ use crate::cache::Persistent;
 
 use log::{info, warn};
 use nexus::paths::{get_addon_dir, get_game_dir};
+use rendering_params::RenderingParams;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
 use std::path::PathBuf;
 use std::time::Duration;
+
+pub mod rendering_params;
 
 const DEFAULT_POPUP_DATA_CACHE_EXPIRATION_SECS: u64 = 36 * 3600;
 const DEFAULT_MAX_POPUP_DATA_CACHE_ELEMENTS: usize = 300;
@@ -26,34 +29,33 @@ pub struct Config {
     pub max_price_expiration_duration: Duration,
     #[serde(default = "default_bold_font_name")]
     pub selected_bold_font_name: Option<String>,
-    #[serde(default = "default_link_color")]
-    pub link_color: [f32; 4],
-    #[serde(default = "yes")]
-    pub use_bullet_list_punctuation: bool,
-    #[serde(default = "yes")]
-    pub show_general_tab: bool,
-    #[serde(default = "yes")]
-    pub show_acquisition_tab: bool,
-    #[serde(default = "yes")]
-    pub show_getting_there_tab: bool,
-    #[serde(default = "yes")]
-    pub show_contents_tab: bool,
-    #[serde(default = "yes")]
-    pub show_notes_tab: bool,
-    #[serde(default = "yes")]
-    pub show_images_tab: bool,
-    #[serde(default = "yes")]
-    pub show_tag_bar: bool,
     #[serde(default = "yes")]
     pub wait_until_all_keys_released: bool,
     #[serde(default = "yes")]
     pub close_on_mouse_away: bool,
     #[serde(default = "no")]
     pub allow_collapsing_popups: bool,
-    #[serde(default = "yes")]
-    pub auto_pin_on_tab_hover: bool,
+    #[serde(default = "RenderingParams::default")]
+    pub rendering_params: RenderingParams
+}
 
-
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            version: VERSION.to_string(),
+            max_popup_data_cache_elements: DEFAULT_MAX_POPUP_DATA_CACHE_ELEMENTS,
+            max_popup_data_cache_expiration_duration: Duration::from_secs(
+                DEFAULT_POPUP_DATA_CACHE_EXPIRATION_SECS,
+            ),
+            max_price_expiration_duration: DEFAULT_PRICE_EXPIRATION_DURATION,
+            max_texture_expiration_duration: DEFAULT_TEXTURE_EXPIRATION_DURATION,
+            selected_bold_font_name: default_bold_font_name(),
+            wait_until_all_keys_released: yes(),
+            close_on_mouse_away: yes(),
+            allow_collapsing_popups: no(),
+            rendering_params: RenderingParams::default()
+        }
+    }
 }
 
 impl Persistent for Config {
@@ -93,38 +95,6 @@ impl Persistent for Config {
     }
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            version: VERSION.to_string(),
-            max_popup_data_cache_elements: DEFAULT_MAX_POPUP_DATA_CACHE_ELEMENTS,
-            max_popup_data_cache_expiration_duration: Duration::from_secs(
-                DEFAULT_POPUP_DATA_CACHE_EXPIRATION_SECS,
-            ),
-            max_price_expiration_duration: DEFAULT_PRICE_EXPIRATION_DURATION,
-            max_texture_expiration_duration: DEFAULT_TEXTURE_EXPIRATION_DURATION,
-            selected_bold_font_name: default_bold_font_name(),
-            link_color: default_link_color(),
-            use_bullet_list_punctuation: yes(),
-            show_general_tab: yes(),
-            show_acquisition_tab: yes(),
-            show_getting_there_tab: yes(),
-            show_contents_tab: yes(),
-            show_notes_tab: yes(),
-            show_images_tab: yes(),
-            show_tag_bar: yes(),
-            wait_until_all_keys_released: yes(),
-            close_on_mouse_away: yes(),
-            allow_collapsing_popups: no(),
-            auto_pin_on_tab_hover: yes()
-        }
-    }
-}
-
-pub trait SwitchValue<T> {
-    fn switch(&mut self);
-}
-
 pub fn config_dir() -> PathBuf {
     get_addon_dir("item_detail_popups").expect("invalid config directory")
 }
@@ -157,15 +127,10 @@ fn default_bold_font_name() -> Option<String> {
     Some(DEFAULT_BOLD_FONT_NAME.to_string())
 }
 
-
-fn default_link_color() -> [f32; 4] {
-    [0.2, 0.4, 0.8, 1.0]
-}
-
-fn no() -> bool {
+pub fn no() -> bool {
     false
 }
 
-fn yes() -> bool {
+pub fn yes() -> bool {
     true
 }

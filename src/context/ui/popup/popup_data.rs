@@ -8,6 +8,7 @@ use super::token::Token;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PopupData {
     pub item_ids: Option<Vec<u32>>,
+    pub item_icon: Option<Token>,
     pub title: String,
     pub description: Vec<Token>,
     pub getting_there: Vec<Token>,
@@ -38,6 +39,7 @@ impl Default for PopupData {
     fn default() -> Self {
         Self {
             item_ids: None,
+            item_icon: None,
             title: "".to_string(),
             description: vec![],
             getting_there: vec![],

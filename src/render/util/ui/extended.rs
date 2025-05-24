@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use nexus::imgui::sys::{self, igGetMousePos};
-use nexus::imgui::{ColorEdit, ColorPreview, ComboBoxFlags, MouseButton, SelectableFlags, Ui, Selectable};
+use nexus::imgui::{ColorEdit, ColorPreview, ComboBoxFlags, MouseButton, Selectable, SelectableFlags, StyleColor, Ui};
 use crate::context::Font;
 
 pub trait UiExtended {
@@ -10,6 +10,9 @@ pub trait UiExtended {
     fn selected_file<L: AsRef<str>, F: Fn()>(&self, title: L, label: L, buf: &mut String, func: F);
     fn link<T: AsRef<str>>(&self, link: &str, text: T, color: [f32; 4], inline: bool);
     fn font_select(&self, label: impl AsRef<str>, current: &mut Option<Font>) -> bool;
+    fn text_vert_centered(&self, text: impl AsRef<str>, height: &f32);
+    fn close_button(&self, text: impl AsRef<str>) -> bool;
+    fn not_in_view(&self, height: &f32) -> bool;
 }
 
 impl UiExtended for Ui<'_> {
@@ -95,7 +98,48 @@ impl UiExtended for Ui<'_> {
                 }
             }
         }
-
         changed
+    }
+
+    fn text_vert_centered(&self, text: impl AsRef<str>, height: &f32) {
+        let text_height = self.calc_text_size(&text)[1];
+        let cur_pos = self.cursor_pos();
+        self.set_cursor_pos([cur_pos[0], cur_pos[1] + (height / 2.0) - (text_height / 2.0)]);
+        self.text(&text);
+    }
+
+    fn close_button(&self, text: impl AsRef<str>) -> bool {
+        let style = self.push_style_var(nexus::imgui::StyleVar::FrameBorderSize(0.0));
+        let button_dimension = 25.0;
+        let margin_outer = 8.0;
+        let margin_inner = 4.0;
+        
+        let window_size = self.window_size();
+        self.set_cursor_pos([window_size[0] - button_dimension - margin_outer, margin_outer]);
+        let result = self.button_with_size(&text, [button_dimension, button_dimension]);
+        
+        let min = self.item_rect_min();
+        let min_with_margin = [min[0] + margin_inner, min[1] + margin_inner];
+
+        let max = self.item_rect_max();
+        let max_with_margin = [max[0] - margin_inner, max[1] - margin_inner];
+
+        let draw_list = self.get_window_draw_list();
+        let color = self.style_color(StyleColor::Text);
+        draw_list
+            .add_line(min_with_margin, max_with_margin, color)
+            .build();
+        
+        draw_list
+            .add_line([min[0] + margin_inner, max[1] - margin_inner], [max[0] - margin_inner, min[1] + margin_inner], color)
+            .build();
+        
+        style.pop();
+        result
+    }
+
+    fn not_in_view(&self, height: &f32) -> bool {
+        let cursor_pos_y = self.cursor_pos()[1];
+        cursor_pos_y < self.scroll_y() - height * 2.0 || cursor_pos_y  > self.scroll_y() + self.window_size()[1] + height
     }
 }

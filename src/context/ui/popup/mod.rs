@@ -28,6 +28,7 @@ pub struct Popup {
     pub opened: bool,
     pub pinned: bool,
     pub pos: Option<[f32; 2]>,
+    pub width: Option<f32>,
     pub data: PopupData,
 }
 
@@ -39,6 +40,7 @@ impl Popup {
             opened: false,
             pinned: false,
             pos: None,
+            width: None,
             data,
         }
     }
