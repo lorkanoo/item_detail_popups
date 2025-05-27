@@ -5,17 +5,17 @@ use crate::cache::Cacheable;
 use crate::cache::CachingStatus;
 use crate::config::rendering_params::RenderingParams;
 use crate::context::ui::popup::dimensions::Dimensions;
-use crate::context::ui::popup::Popup;
 use crate::context::ui::popup::style::Style;
 use crate::context::ui::popup::tag_params::TagParams;
 use crate::context::ui::popup::token::Token;
+use crate::context::ui::popup::Popup;
 use crate::context::Context;
+use crate::context::Font;
 use crate::render::util::ui::{UiAction, COPPER_COLOR, GOLD_COLOR, HIGHLIGHT_COLOR, SILVER_COLOR};
 use nexus::imgui::MenuItem;
 use nexus::imgui::{sys, ChildWindow, MouseButton, Ui};
 use std::ptr;
 use util::ui::UiLink;
-use crate::context::Font;
 
 use super::util;
 use super::util::ui::extended::UiExtended;
@@ -34,7 +34,7 @@ impl Context {
         ui_actions: &mut Vec<UiAction>,
         width_limit: f32,
         cache: &mut Cache,
-        bold_font: &Option<Font>
+        bold_font: &Option<Font>,
     ) {
         let rendering_params = Self::get_rendering_params();
         Self::render_title_bar(ui, popup, cache, bold_font);
@@ -43,34 +43,194 @@ impl Context {
         }
         if popup.data.is_not_empty() {
             if let Some(_token) = ui.tab_bar(format!("tabs##rps{}", popup.id)) {
-                Self::render_tab("General", ui, pinned_popup_vec_index, ui_actions, width_limit, cache, 
-                    bold_font, popup.id, &popup.data.item_ids, &popup.data.description, rendering_params.show_general_tab, &rendering_params, &mut popup.pinned, &mut popup.pos, true);
-               Self::render_tab("Acquisition", ui, pinned_popup_vec_index, ui_actions, width_limit, cache, 
-                    bold_font, popup.id, &None, &popup.data.acquisition, rendering_params.show_acquisition_tab, &rendering_params, &mut popup.pinned, &mut popup.pos, false);
-               Self::render_tab("Teaches recipe", ui, pinned_popup_vec_index, ui_actions, width_limit, cache, 
-                    bold_font, popup.id, &None, &popup.data.teaches_recipe, rendering_params.show_teaches_recipe_tab, &rendering_params, &mut popup.pinned, &mut popup.pos, false);
-               Self::render_tab("Getting there", ui, pinned_popup_vec_index, ui_actions, width_limit, cache, 
-                    bold_font, popup.id, &None, &popup.data.getting_there, rendering_params.show_getting_there_tab, &rendering_params, &mut popup.pinned, &mut popup.pos, false);
-               Self::render_tab("Location", ui, pinned_popup_vec_index, ui_actions, width_limit, cache, 
-                    bold_font, popup.id, &None, &popup.data.location, rendering_params.show_location_tab, &rendering_params, &mut popup.pinned, &mut popup.pos, false);
-               Self::render_tab("Walkthrough", ui, pinned_popup_vec_index, ui_actions, width_limit, cache, 
-                    bold_font, popup.id, &None, &popup.data.walkthrough, rendering_params.show_walkthrough_tab, &rendering_params, &mut popup.pinned, &mut popup.pos, false);
-               Self::render_tab("Rewards", ui, pinned_popup_vec_index, ui_actions, width_limit, cache, 
-                    bold_font, popup.id, &None, &popup.data.rewards, rendering_params.show_rewards_tab, &rendering_params, &mut popup.pinned, &mut popup.pos, false);
-               Self::render_tab("Related achievements", ui, pinned_popup_vec_index, ui_actions, width_limit, cache, 
-                    bold_font, popup.id, &None, &popup.data.related_achievements, rendering_params.show_related_achievements_tab, &rendering_params, &mut popup.pinned, &mut popup.pos, false);
-               Self::render_tab("Contents", ui, pinned_popup_vec_index, ui_actions, width_limit, cache, 
-                    bold_font, popup.id, &None, &popup.data.contents, rendering_params.show_contents_tab, &rendering_params, &mut popup.pinned, &mut popup.pos, false);
-               Self::render_tab("Notes", ui, pinned_popup_vec_index, ui_actions, width_limit, cache, 
-                    bold_font, popup.id, &None, &popup.data.notes, rendering_params.show_notes_tab, &rendering_params, &mut popup.pinned, &mut popup.pos, false);
-                Self::render_images_tab(ui, pinned_popup_vec_index, popup, ui_actions, cache, &rendering_params);
+                Self::render_tab(
+                    "General",
+                    ui,
+                    pinned_popup_vec_index,
+                    ui_actions,
+                    width_limit,
+                    cache,
+                    bold_font,
+                    popup.id,
+                    &popup.data.item_ids,
+                    &popup.data.description,
+                    rendering_params.show_general_tab,
+                    &rendering_params,
+                    &mut popup.pinned,
+                    &mut popup.pos,
+                    true,
+                );
+                Self::render_tab(
+                    "Acquisition",
+                    ui,
+                    pinned_popup_vec_index,
+                    ui_actions,
+                    width_limit,
+                    cache,
+                    bold_font,
+                    popup.id,
+                    &None,
+                    &popup.data.acquisition,
+                    rendering_params.show_acquisition_tab,
+                    &rendering_params,
+                    &mut popup.pinned,
+                    &mut popup.pos,
+                    false,
+                );
+                Self::render_tab(
+                    "Teaches recipe",
+                    ui,
+                    pinned_popup_vec_index,
+                    ui_actions,
+                    width_limit,
+                    cache,
+                    bold_font,
+                    popup.id,
+                    &None,
+                    &popup.data.teaches_recipe,
+                    rendering_params.show_teaches_recipe_tab,
+                    &rendering_params,
+                    &mut popup.pinned,
+                    &mut popup.pos,
+                    false,
+                );
+                Self::render_tab(
+                    "Getting there",
+                    ui,
+                    pinned_popup_vec_index,
+                    ui_actions,
+                    width_limit,
+                    cache,
+                    bold_font,
+                    popup.id,
+                    &None,
+                    &popup.data.getting_there,
+                    rendering_params.show_getting_there_tab,
+                    &rendering_params,
+                    &mut popup.pinned,
+                    &mut popup.pos,
+                    false,
+                );
+                Self::render_tab(
+                    "Location",
+                    ui,
+                    pinned_popup_vec_index,
+                    ui_actions,
+                    width_limit,
+                    cache,
+                    bold_font,
+                    popup.id,
+                    &None,
+                    &popup.data.location,
+                    rendering_params.show_location_tab,
+                    &rendering_params,
+                    &mut popup.pinned,
+                    &mut popup.pos,
+                    false,
+                );
+                Self::render_tab(
+                    "Walkthrough",
+                    ui,
+                    pinned_popup_vec_index,
+                    ui_actions,
+                    width_limit,
+                    cache,
+                    bold_font,
+                    popup.id,
+                    &None,
+                    &popup.data.walkthrough,
+                    rendering_params.show_walkthrough_tab,
+                    &rendering_params,
+                    &mut popup.pinned,
+                    &mut popup.pos,
+                    false,
+                );
+                Self::render_tab(
+                    "Rewards",
+                    ui,
+                    pinned_popup_vec_index,
+                    ui_actions,
+                    width_limit,
+                    cache,
+                    bold_font,
+                    popup.id,
+                    &None,
+                    &popup.data.rewards,
+                    rendering_params.show_rewards_tab,
+                    &rendering_params,
+                    &mut popup.pinned,
+                    &mut popup.pos,
+                    false,
+                );
+                Self::render_tab(
+                    "Related achievements",
+                    ui,
+                    pinned_popup_vec_index,
+                    ui_actions,
+                    width_limit,
+                    cache,
+                    bold_font,
+                    popup.id,
+                    &None,
+                    &popup.data.related_achievements,
+                    rendering_params.show_related_achievements_tab,
+                    &rendering_params,
+                    &mut popup.pinned,
+                    &mut popup.pos,
+                    false,
+                );
+                Self::render_tab(
+                    "Contents",
+                    ui,
+                    pinned_popup_vec_index,
+                    ui_actions,
+                    width_limit,
+                    cache,
+                    bold_font,
+                    popup.id,
+                    &None,
+                    &popup.data.contents,
+                    rendering_params.show_contents_tab,
+                    &rendering_params,
+                    &mut popup.pinned,
+                    &mut popup.pos,
+                    false,
+                );
+                Self::render_tab(
+                    "Notes",
+                    ui,
+                    pinned_popup_vec_index,
+                    ui_actions,
+                    width_limit,
+                    cache,
+                    bold_font,
+                    popup.id,
+                    &None,
+                    &popup.data.notes,
+                    rendering_params.show_notes_tab,
+                    &rendering_params,
+                    &mut popup.pinned,
+                    &mut popup.pos,
+                    false,
+                );
+                Self::render_images_tab(
+                    ui,
+                    pinned_popup_vec_index,
+                    popup,
+                    ui_actions,
+                    cache,
+                    &rendering_params,
+                );
             }
         }
         Self::render_button_ribbon(ui, pinned_popup_vec_index, popup, ui_actions);
-        
+
         let window_width = ui.window_size()[0];
         let is_resizing = window_width != popup.width.unwrap_or(window_width);
-        if pinned_popup_vec_index.is_some() && !is_resizing && ui.close_button(format!("##idp_close{}", popup.id)) {
+        if pinned_popup_vec_index.is_some()
+            && !is_resizing
+            && ui.close_button(format!("##idp_close{}", popup.id))
+        {
             popup.opened = false
         }
         popup.width = Some(window_width);
@@ -80,16 +240,10 @@ impl Context {
         Addon::read_config().rendering_params.clone()
     }
 
-    fn render_title_bar(
-        ui: &Ui,
-        popup: &mut Popup,
-        cache: &mut Cache,
-        bold_font: &Option<Font>
-
-    ) {
+    fn render_title_bar(ui: &Ui, popup: &mut Popup, cache: &mut Cache, bold_font: &Option<Font>) {
         let dimensions = match &popup.data.item_icon {
             Some(Token::Image(href, dimensions)) => Self::render_image(ui, href, dimensions, cache),
-            _ => None
+            _ => None,
         };
         ui.same_line();
         if let Some(bold_font) = bold_font {
@@ -125,10 +279,12 @@ impl Context {
         popup_pos: &mut Option<[f32; 2]>,
         general_tab: bool,
     ) {
-        if should_render && (!tokens.is_empty() || (general_tab && item_ids.is_some()))
-        {
+        if should_render && (!tokens.is_empty() || (general_tab && item_ids.is_some())) {
             let token = ui.tab_item(format!("{tab_name}##idp{popup_id}"));
-            if ui.is_item_hovered() && pinned_popup_vec_index.is_none() && rendering_params.auto_pin_on_tab_hover {
+            if ui.is_item_hovered()
+                && pinned_popup_vec_index.is_none()
+                && rendering_params.auto_pin_on_tab_hover
+            {
                 Self::pin_popup(ui, popup_pinned, popup_pos, ui_actions);
             }
             if token.is_some() {
@@ -141,7 +297,7 @@ impl Context {
                         width_limit,
                         cache,
                         bold_font,
-                        rendering_params
+                        rendering_params,
                     );
                 };
                 if tokens.len() > TEXT_WRAP_LIMIT && !general_tab {
@@ -168,18 +324,21 @@ impl Context {
     }
 
     fn render_images_tab(
-        ui: &Ui<'_>, 
+        ui: &Ui<'_>,
         pinned_popup_vec_index: Option<usize>,
         popup: &mut Popup,
         ui_actions: &mut Vec<UiAction>,
         cache: &mut Cache,
-        rendering_params: &RenderingParams
+        rendering_params: &RenderingParams,
     ) {
         if !rendering_params.show_images_tab || popup.data.images.is_empty() {
             return;
         }
         let token = ui.tab_item(format!("Images##idp{}", popup.id));
-        if ui.is_item_hovered() && pinned_popup_vec_index.is_none() && rendering_params.auto_pin_on_tab_hover {
+        if ui.is_item_hovered()
+            && pinned_popup_vec_index.is_none()
+            && rendering_params.auto_pin_on_tab_hover
+        {
             Self::pin_popup(ui, &mut popup.pinned, &mut popup.pos, ui_actions);
         }
         if token.is_some() {
@@ -310,7 +469,7 @@ impl Context {
         width_limit: f32,
         cache: &mut Cache,
         bold_font: &Option<Font>,
-        rendering_params: &RenderingParams
+        rendering_params: &RenderingParams,
     ) {
         let item_spacing_style = ui.push_style_var(nexus::imgui::StyleVar::ItemSpacing([0.0, 5.0]));
         ui.spacing();
@@ -322,13 +481,15 @@ impl Context {
         for token in tokens {
             if !matches!(last_token, Some(Token::Spacing)) {
                 ui.same_line();
-            }            
+            }
             match token {
                 Token::Indent(depth) => current_indent = *depth,
-                Token::Spacing =>{
+                Token::Spacing => {
                     ui.spacing();
-                },
-                Token::Text(text, style) => Self::render_text(ui, text, style, current_indent, width_limit, bold_font),
+                }
+                Token::Text(text, style) => {
+                    Self::render_text(ui, text, style, current_indent, width_limit, bold_font)
+                }
                 Token::Tag(tag_params) => {
                     Self::render_tag(
                         ui,
@@ -337,11 +498,18 @@ impl Context {
                         ui_actions,
                         current_indent,
                         width_limit,
-                        rendering_params.link_color
+                        rendering_params.link_color,
                     );
                 }
-                Token::ListElement => Self::render_list_element(ui, &mut starts_with_list, current_indent, rendering_params.use_bullet_list_punctuation),
-                Token::Image(href, dimensions) => { let _ = Self::render_image(ui, href, dimensions, cache); }
+                Token::ListElement => Self::render_list_element(
+                    ui,
+                    &mut starts_with_list,
+                    current_indent,
+                    rendering_params.use_bullet_list_punctuation,
+                ),
+                Token::Image(href, dimensions) => {
+                    let _ = Self::render_image(ui, href, dimensions, cache);
+                }
             }
             last_token = Some(token);
         }
@@ -378,7 +546,14 @@ impl Context {
         }
     }
 
-    fn render_text(ui: &Ui, text: &str, style: &Style, current_indent: i32, width_limit: f32, bold_font: &Option<Font>) {
+    fn render_text(
+        ui: &Ui,
+        text: &str,
+        style: &Style,
+        current_indent: i32,
+        width_limit: f32,
+        bold_font: &Option<Font>,
+    ) {
         Self::render_words(
             ui,
             text,
@@ -394,20 +569,26 @@ impl Context {
                     } else {
                         ui.text_colored(HIGHLIGHT_COLOR, word);
                     }
-                },
+                }
                 Style::Disabled => ui.text_disabled(word),
             },
         );
     }
 
-    fn render_image(ui: &Ui, href: &str, dimensions: &Option<Dimensions>, cache: &mut Cache) -> Option<Dimensions> {
-        if let Some(output) = dimensions.as_ref()
+    fn render_image(
+        ui: &Ui,
+        href: &str,
+        dimensions: &Option<Dimensions>,
+        cache: &mut Cache,
+    ) -> Option<Dimensions> {
+        if let Some(output) = dimensions
+            .as_ref()
             .filter(|d| ui.not_in_view(&d.height))
             .map(|d| Self::render_dummy(ui, d, href))
         {
             return output;
         }
-         
+
         let cached_data_opt = cache.textures.retrieve(href.to_string());
         if let Some(cached_data) = cached_data_opt {
             match cached_data.caching_status {
@@ -415,7 +596,7 @@ impl Context {
                     if let Some(texture) = cached_data.value() {
                         let (width, height) = match dimensions {
                             Some(d) => d.tuple(),
-                            None => (texture.width as f32, texture.height as f32)
+                            None => (texture.width as f32, texture.height as f32),
                         };
                         ui.invisible_button(href, [width, height]);
                         ui.get_window_draw_list()
@@ -423,9 +604,12 @@ impl Context {
                             .build();
                         return Some(Dimensions::new(width, height));
                     }
-
                 }
-                _ => return dimensions.as_ref().and_then(|d| Self::render_dummy(ui, d, href))
+                _ => {
+                    return dimensions
+                        .as_ref()
+                        .and_then(|d| Self::render_dummy(ui, d, href))
+                }
             }
         }
         None
@@ -435,7 +619,7 @@ impl Context {
         let (width, height) = dimensions.tuple();
         ui.invisible_button(href, [width, height]);
         Some(dimensions.clone())
-    } 
+    }
 
     fn render_tag(
         ui: &Ui,
@@ -444,7 +628,7 @@ impl Context {
         ui_actions: &mut Vec<UiAction>,
         current_indent: i32,
         width_limit: f32,
-        link_color: [f32; 4]
+        link_color: [f32; 4],
     ) {
         let href = tag_params.href.to_string();
         let title = tag_params.title.to_string();
@@ -575,7 +759,10 @@ impl Context {
                 if *cursor_pos.first().unwrap() > width_limit {
                     ui.new_line();
                 }
-                ui.text_colored(Addon::read_config().rendering_params.link_color, format!("[{}]", tag.1));
+                ui.text_colored(
+                    Addon::read_config().rendering_params.link_color,
+                    format!("[{}]", tag.1),
+                );
                 if ui.is_item_hovered() && ui.is_mouse_released(MouseButton::Left) && popup.pinned {
                     ui_actions.push(UiAction::Open(UiLink {
                         href: tag.0.clone(),
@@ -588,7 +775,12 @@ impl Context {
         }
     }
 
-    fn render_list_element(ui: &Ui, starts_with_list: &mut bool, current_indent: i32, use_bullet_list_punctuation: bool) {
+    fn render_list_element(
+        ui: &Ui,
+        starts_with_list: &mut bool,
+        current_indent: i32,
+        use_bullet_list_punctuation: bool,
+    ) {
         if !*starts_with_list {
             ui.new_line();
             Self::add_indent(ui, current_indent);
@@ -606,7 +798,7 @@ impl Context {
         if cursor_pos[0] > width_limit {
             ui.new_line();
             Self::add_indent(ui, current_indent);
-        }     
+        }
     }
 
     fn add_indent(ui: &Ui, current_indent: i32) {

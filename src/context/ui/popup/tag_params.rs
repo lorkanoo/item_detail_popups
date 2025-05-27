@@ -6,4 +6,3 @@ pub struct TagParams {
     pub text: String,
     pub title: String,
 }
-

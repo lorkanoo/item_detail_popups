@@ -2,7 +2,7 @@ use crate::addon::{Addon, MULTITHREADED_ADDON};
 use crate::api::gw2tp::fetch_item_names_thread;
 use crate::thread::{gc_thread, main_background_thread, preloader_thread};
 
-use log::{trace, error, info};
+use log::{error, info, trace};
 use std::sync::{Mutex, MutexGuard};
 use std::thread;
 use std::thread::JoinHandle;

@@ -23,7 +23,7 @@ impl Context {
                         &mut ui_actions,
                         width_limit,
                         &mut self.cache,
-                        &self.bold_font
+                        &self.bold_font,
                     );
                 });
                 if Addon::read_config().close_on_mouse_away {

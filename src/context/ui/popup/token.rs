@@ -1,6 +1,6 @@
+use super::dimensions::Dimensions;
 use super::{style::Style, tag_params::TagParams};
 use serde::{Deserialize, Serialize};
-use super::dimensions::Dimensions;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Token {
     Text(String, Style),
@@ -10,4 +10,3 @@ pub enum Token {
     Indent(i32),
     Image(String, Option<Dimensions>),
 }
-

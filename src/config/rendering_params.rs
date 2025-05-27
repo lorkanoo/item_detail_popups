@@ -60,5 +60,3 @@ impl Default for RenderingParams {
 fn default_link_color() -> [f32; 4] {
     [0.2, 0.4, 0.8, 1.0]
 }
-
-

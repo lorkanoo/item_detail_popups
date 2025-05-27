@@ -3,22 +3,23 @@ use crate::api::get_sync;
 use crate::cache::texture::identifier_to_filename;
 use crate::cache::Cacheable;
 use crate::config::textures_dir;
+use crate::context::ui::popup::dimensions::Dimensions;
+use crate::context::ui::popup::popup_data::PopupData;
 use crate::context::ui::popup::style::Style::{self, Bold, Normal};
-use ego_tree::NodeRef;
-use scraper::selectable::Selectable;
+use crate::context::ui::popup::tag_params::TagParams;
 use crate::context::ui::popup::token::Token;
+use crate::context::ui::popup::Popup;
+use ego_tree::NodeRef;
 use log::{debug, error, trace};
+use scraper::selectable::Selectable;
 use scraper::{CaseSensitivity, ElementRef, Html, Node, Selector};
 use std::fs::{self, File};
 use std::io::copy;
 use std::ops::Deref;
-use crate::context::ui::popup::Popup;
-use crate::context::ui::popup::tag_params::TagParams;
-use crate::context::ui::popup::popup_data::PopupData;
-use crate::context::ui::popup::dimensions::Dimensions;
 
 const GW2_WIKI_URL: &str = "https://wiki.guildwars2.com";
-const ITEM_ID_SPECIAL_SEARCH: &str = "/wiki/Special:RunQuery/Search_by_id?title=Special%3ARunQuery%2FSearch_by_id\
+const ITEM_ID_SPECIAL_SEARCH: &str =
+    "/wiki/Special:RunQuery/Search_by_id?title=Special%3ARunQuery%2FSearch_by_id\
             &pfRunQueryFormName=Search+by+id&Search_by_id=id%3D45105%26context%3DItem\
             &wpRunQuery=&pf_free_text=\
             &Search+by+id%5Bid%5D={}\
@@ -176,14 +177,34 @@ pub fn fill_wiki_details(href: &String, popup: &mut Popup) -> bool {
                 fill_item_icon(&document, popup);
                 fill_tags(&document, popup);
                 fill_description(&document, popup);
-                fill_data("h2:has(#Getting_there)", &document, &mut popup.data.getting_there);
-                fill_data("h2:has(#Acquisition)", &document, &mut popup.data.acquisition);
-                fill_data("h2:has(#Teaches_recipe)", &document, &mut popup.data.teaches_recipe);
+                fill_data(
+                    "h2:has(#Getting_there)",
+                    &document,
+                    &mut popup.data.getting_there,
+                );
+                fill_data(
+                    "h2:has(#Acquisition)",
+                    &document,
+                    &mut popup.data.acquisition,
+                );
+                fill_data(
+                    "h2:has(#Teaches_recipe)",
+                    &document,
+                    &mut popup.data.teaches_recipe,
+                );
                 fill_data("h2:has(#Contents)", &document, &mut popup.data.contents);
-                fill_data("h2:has(#Walkthrough)", &document, &mut popup.data.walkthrough);
+                fill_data(
+                    "h2:has(#Walkthrough)",
+                    &document,
+                    &mut popup.data.walkthrough,
+                );
                 fill_data("h2:has(#Rewards)", &document, &mut popup.data.rewards);
                 fill_data("h2:has(#Location)", &document, &mut popup.data.location);
-                fill_data("h2:has(#Related_achievements)", &document, &mut popup.data.related_achievements);
+                fill_data(
+                    "h2:has(#Related_achievements)",
+                    &document,
+                    &mut popup.data.related_achievements,
+                );
                 fill_notes(&document, popup);
                 fill_images(&document, popup);
                 true
@@ -276,9 +297,7 @@ fn fill_description(document: &Html, popup: &mut Popup) {
 }
 
 fn fill_data(selector: &str, doc: &Html, tokens: &mut Vec<Token>) {
-    if let Some(doc_pos) = doc.select(
-        &Selector::parse(selector).unwrap()
-    ).next() {
+    if let Some(doc_pos) = doc.select(&Selector::parse(selector).unwrap()).next() {
         let mut next = doc_pos.next_sibling();
         while let Some(node) = next {
             trace!("[fill data] loop {selector}");
@@ -344,7 +363,10 @@ fn fill_item_icon(document: &Html, popup: &mut Popup) {
         if href.is_none() {
             return;
         }
-        popup.data.item_icon = Some(Token::Image(href.unwrap().to_string(), Some(Dimensions::medium())));
+        popup.data.item_icon = Some(Token::Image(
+            href.unwrap().to_string(),
+            Some(Dimensions::medium()),
+        ));
     }
 }
 
@@ -407,13 +429,9 @@ pub fn special_search(item_id: Option<u32>, href: &String) -> Option<(String, St
     }
 }
 
-fn parse_node(
-    result: &mut Vec<Token>,
-    node: NodeRef<Node>,
-) {
+fn parse_node(result: &mut Vec<Token>, node: NodeRef<Node>) {
     parse_node_with_style(result, node, &mut Normal, &mut -1);
 }
-
 
 fn parse_node_with_style(
     result: &mut Vec<Token>,
@@ -454,7 +472,7 @@ fn parse_node_with_style(
                     if let Some(src) = child_el.value().attr("src") {
                         result.push(Token::Image(src.to_string(), Some(Dimensions::small())));
                     }
-                } 
+                }
                 if let Some(text) = child.value().as_text() {
                     let text = process_text(&text.text);
                     let mut title = text.clone();
@@ -474,7 +492,7 @@ fn parse_node_with_style(
                 "ul" => {
                     *indent_depth += 1;
                     result.push(Token::Indent(*indent_depth));
-                },
+                }
                 "li" => result.push(Token::ListElement),
                 "dt" | "h3" | "dl" => result.push(Token::Spacing),
                 "img" => {
@@ -507,7 +525,7 @@ fn parse_node_with_style(
 fn process_text(text: &str) -> String {
     let result = text.trim().replace("—", "-").replace("“", "\"").to_string();
     if result == "\"" {
-        return "".to_string()
+        return "".to_string();
     }
     result
 }

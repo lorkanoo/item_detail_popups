@@ -36,7 +36,7 @@ pub struct Config {
     #[serde(default = "no")]
     pub allow_collapsing_popups: bool,
     #[serde(default = "RenderingParams::default")]
-    pub rendering_params: RenderingParams
+    pub rendering_params: RenderingParams,
 }
 
 impl Default for Config {
@@ -53,7 +53,7 @@ impl Default for Config {
             wait_until_all_keys_released: yes(),
             close_on_mouse_away: yes(),
             allow_collapsing_popups: no(),
-            rendering_params: RenderingParams::default()
+            rendering_params: RenderingParams::default(),
         }
     }
 }

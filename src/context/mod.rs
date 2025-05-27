@@ -22,7 +22,7 @@ pub struct Context {
     pub search_text: String,
     pub should_open_search: bool,
     pub search_opened: bool,
-    pub bold_font: Option<Font>
+    pub bold_font: Option<Font>,
 }
 
 impl Default for Context {
@@ -37,7 +37,7 @@ impl Default for Context {
             search_text: "".to_string(),
             should_open_search: false,
             search_opened: false,
-            bold_font: None
+            bold_font: None,
         }
     }
 }
@@ -46,7 +46,6 @@ impl Default for Context {
 #[repr(transparent)]
 pub struct Font(pub NonNull<ImFont>);
 pub struct FontToken;
-
 
 unsafe impl Send for Font {}
 unsafe impl Sync for Font {}
@@ -57,7 +56,7 @@ impl Font {
     }
 
     pub unsafe fn get_all() -> impl Iterator<Item = Self> {
-        // SAFETY: no idea 
+        // SAFETY: no idea
         let io = sys::igGetIO();
         let atlas = (*io).Fonts;
         let data = (*atlas).Fonts.Data;
@@ -92,6 +91,3 @@ impl Drop for FontToken {
         unsafe { sys::igPopFont() }
     }
 }
-
-
-

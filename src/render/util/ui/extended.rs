@@ -1,8 +1,11 @@
 use std::borrow::Cow;
 
-use nexus::imgui::sys::{self, igGetMousePos};
-use nexus::imgui::{ColorEdit, ColorPreview, ComboBoxFlags, MouseButton, Selectable, SelectableFlags, StyleColor, Ui};
 use crate::context::Font;
+use nexus::imgui::sys::{self, igGetMousePos};
+use nexus::imgui::{
+    ColorEdit, ColorPreview, ComboBoxFlags, MouseButton, Selectable, SelectableFlags, StyleColor,
+    Ui,
+};
 
 #[allow(dead_code)]
 pub trait UiExtended {
@@ -65,7 +68,7 @@ impl UiExtended for Ui<'_> {
         if inline {
             self.same_line();
         }
-    } 
+    }
 
     fn font_select(&self, label: impl AsRef<str>, current: &mut Option<Font>) -> bool {
         const INHERIT: &str = "Default";
@@ -75,10 +78,12 @@ impl UiExtended for Ui<'_> {
             .map(|current| unsafe { current.name_raw() }.to_string_lossy())
             .unwrap_or(Cow::Borrowed(INHERIT));
 
-        if let Some(_token) = self.begin_combo_with_flags(label, preview, ComboBoxFlags::HEIGHT_LARGE) {
+        if let Some(_token) =
+            self.begin_combo_with_flags(label, preview, ComboBoxFlags::HEIGHT_LARGE)
+        {
             if Selectable::new(INHERIT).build(self) {
                 *current = None;
-            changed = true;
+                changed = true;
             }
 
             for font in unsafe { Font::get_all() } {
@@ -105,7 +110,10 @@ impl UiExtended for Ui<'_> {
     fn text_vert_centered(&self, text: impl AsRef<str>, height: &f32) {
         let text_height = self.calc_text_size(&text)[1];
         let cur_pos = self.cursor_pos();
-        self.set_cursor_pos([cur_pos[0], cur_pos[1] + (height / 2.0) - (text_height / 2.0)]);
+        self.set_cursor_pos([
+            cur_pos[0],
+            cur_pos[1] + (height / 2.0) - (text_height / 2.0),
+        ]);
         self.text(&text);
     }
 
@@ -114,11 +122,14 @@ impl UiExtended for Ui<'_> {
         let button_dimension = 25.0;
         let margin_outer = 8.0;
         let margin_inner = 4.0;
-        
+
         let window_size = self.window_size();
-        self.set_cursor_pos([window_size[0] - button_dimension - margin_outer, margin_outer]);
+        self.set_cursor_pos([
+            window_size[0] - button_dimension - margin_outer,
+            margin_outer,
+        ]);
         let result = self.button_with_size(&text, [button_dimension, button_dimension]);
-        
+
         let min = self.item_rect_min();
         let min_with_margin = [min[0] + margin_inner, min[1] + margin_inner];
 
@@ -130,17 +141,22 @@ impl UiExtended for Ui<'_> {
         draw_list
             .add_line(min_with_margin, max_with_margin, color)
             .build();
-        
+
         draw_list
-            .add_line([min[0] + margin_inner, max[1] - margin_inner], [max[0] - margin_inner, min[1] + margin_inner], color)
+            .add_line(
+                [min[0] + margin_inner, max[1] - margin_inner],
+                [max[0] - margin_inner, min[1] + margin_inner],
+                color,
+            )
             .build();
-        
+
         style.pop();
         result
     }
 
     fn not_in_view(&self, height: &f32) -> bool {
         let cursor_pos_y = self.cursor_pos()[1];
-        cursor_pos_y < self.scroll_y() - height * 2.0 || cursor_pos_y  > self.scroll_y() + self.window_size()[1] + height
+        cursor_pos_y < self.scroll_y() - height * 2.0
+            || cursor_pos_y > self.scroll_y() + self.window_size()[1] + height
     }
 }

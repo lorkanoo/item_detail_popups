@@ -1,13 +1,13 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use once_cell::sync::Lazy;
-use serde::{Deserialize, Serialize};
 use popup_data::PopupData;
+use serde::{Deserialize, Serialize};
+pub mod dimensions;
 pub mod popup_data;
 pub mod style;
 pub mod tag_params;
 pub mod token;
-pub mod dimensions;
 
 static POPUP_ID_COUNTER: Lazy<AtomicU64> = Lazy::new(|| {
     AtomicU64::new(

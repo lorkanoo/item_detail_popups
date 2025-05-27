@@ -1,9 +1,9 @@
+use super::util::ui::extended::UiExtended;
 use crate::thread::load_fonts;
 use crate::{addon::Addon, context::Context};
 use log::debug;
 use nexus::imgui::Ui;
 use std::time::Duration;
-use super::util::ui::extended::UiExtended;
 
 const MAX_REFRESH_HOURS: i32 = 10000;
 const MAX_REFRESH_MINUTES: i32 = 59;
@@ -28,18 +28,26 @@ impl Context {
             if let Some(_token) = ui.tab_item("Help") {
                 self.render_help(ui);
             }
-
         }
-
     }
 
     fn render_help(&mut self, ui: &Ui) {
         ui.text("This addon requires english in-game language to detect items properly.");
         ui.text("To ask questions / report issues message me in game (lorkano.4609) or visit");
-        ui.link("https://discord.com/channels/410828272679518241/1321117612209602601", "discord", Addon::read_config().rendering_params.link_color, true);
+        ui.link(
+            "https://discord.com/channels/410828272679518241/1321117612209602601",
+            "discord",
+            Addon::read_config().rendering_params.link_color,
+            true,
+        );
         ui.text("channel.");
         ui.text("Please make sure to read ");
-        ui.link("https://github.com/lorkanoo/item_detail_popups", "usage guide", Addon::read_config().rendering_params.link_color, true);
+        ui.link(
+            "https://github.com/lorkanoo/item_detail_popups",
+            "usage guide",
+            Addon::read_config().rendering_params.link_color,
+            true,
+        );
         ui.text("in case of any problems.");
     }
 
@@ -73,7 +81,9 @@ impl Context {
         );
         ui.checkbox(
             "Use bullet character in list punctuation##idp",
-            &mut Addon::write_config().rendering_params.use_bullet_list_punctuation,
+            &mut Addon::write_config()
+                .rendering_params
+                .use_bullet_list_punctuation,
         );
         ui.checkbox(
             "Show general tab##idp",
@@ -93,11 +103,15 @@ impl Context {
         );
         ui.checkbox(
             "Show getting there tab##idp",
-            &mut Addon::write_config().rendering_params.show_getting_there_tab,
+            &mut Addon::write_config()
+                .rendering_params
+                .show_getting_there_tab,
         );
         ui.checkbox(
             "Show teaching recipe tab##idp",
-            &mut Addon::write_config().rendering_params.show_teaches_recipe_tab,
+            &mut Addon::write_config()
+                .rendering_params
+                .show_teaches_recipe_tab,
         );
 
         ui.checkbox(
@@ -113,7 +127,10 @@ impl Context {
             "Show images tab##idp",
             &mut Addon::write_config().rendering_params.show_images_tab,
         );
-        ui.checkbox("Show tag bar##idp", &mut Addon::write_config().rendering_params.show_tag_bar);
+        ui.checkbox(
+            "Show tag bar##idp",
+            &mut Addon::write_config().rendering_params.show_tag_bar,
+        );
     }
 
     fn render_advanced_options(&mut self, ui: &Ui) {
@@ -133,7 +150,6 @@ impl Context {
             "Pin on tab hover##idp",
             &mut Addon::write_config().rendering_params.auto_pin_on_tab_hover,
         );
-
     }
 
     fn render_cache_options(&mut self, ui: &Ui) {

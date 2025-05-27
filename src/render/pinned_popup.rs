@@ -1,8 +1,11 @@
-use nexus::imgui::{Condition, Ui, Window};
 use crate::context::Font;
+use nexus::imgui::{Condition, Ui, Window};
 
 use crate::{
-    addon::Addon, cache::Cache, context::{ui::popup::Popup, Context}, thread::{open_link_thread, refresh_popup_thread}
+    addon::Addon,
+    cache::Cache,
+    context::{ui::popup::Popup, Context},
+    thread::{open_link_thread, refresh_popup_thread},
 };
 
 use super::util::ui::UiAction;
@@ -11,12 +14,24 @@ impl Context {
     pub fn render_pinned_popups(&mut self, ui: &Ui) {
         let mut ui_actions = vec![];
         for (i, popup) in self.ui.pinned_popups.iter_mut().enumerate() {
-            Self::render_pinned_popup(ui, &mut ui_actions, i, popup, &mut self.cache, &self.bold_font);
+            Self::render_pinned_popup(
+                ui,
+                &mut ui_actions,
+                i,
+                popup,
+                &mut self.cache,
+                &self.bold_font,
+            );
         }
         self.process_pinned_popups_actions(ui_actions);
     }
 
-    pub fn pin_popup(ui: &Ui, popup_pinned: &mut bool, popup_pos: &mut Option<[f32; 2]>, ui_actions: &mut Vec<UiAction>) {
+    pub fn pin_popup(
+        ui: &Ui,
+        popup_pinned: &mut bool,
+        popup_pos: &mut Option<[f32; 2]>,
+        ui_actions: &mut Vec<UiAction>,
+    ) {
         ui.close_current_popup();
         ui_actions.push(UiAction::Pin);
         *popup_pinned = true;
@@ -29,7 +44,7 @@ impl Context {
         popup_vec_index: usize,
         popup: &mut Popup,
         cache: &mut Cache,
-        bold_font: &Option<Font>
+        bold_font: &Option<Font>,
     ) {
         let size = ui.calc_text_size(&popup.data.title);
         let screen_height = ui.io().display_size[1];
@@ -53,7 +68,7 @@ impl Context {
                     ui_actions,
                     640.0,
                     cache,
-                    bold_font
+                    bold_font,
                 );
             });
         if !popup.opened {

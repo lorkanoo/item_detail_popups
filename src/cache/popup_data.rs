@@ -4,7 +4,7 @@ use crate::context::ui::popup::popup_data::PopupData;
 
 use super::{is_cache_expired, Cacheable, Persistent};
 use indexmap::IndexMap;
-use log::{debug, info, warn, trace};
+use log::{debug, info, trace, warn};
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
 use std::path::PathBuf;

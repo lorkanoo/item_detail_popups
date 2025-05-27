@@ -6,4 +6,3 @@ pub enum Style {
     Bold,
     Disabled,
 }
-

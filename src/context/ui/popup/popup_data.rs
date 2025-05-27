@@ -30,7 +30,7 @@ pub struct PopupData {
 
 impl PopupData {
     pub fn is_not_empty(&self) -> bool {
-        !self.description.is_empty() 
+        !self.description.is_empty()
             || !self.getting_there.is_empty()
             || !self.contents.is_empty()
             || !self.location.is_empty()
@@ -69,4 +69,3 @@ impl Default for PopupData {
         }
     }
 }
-
