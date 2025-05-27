@@ -18,7 +18,11 @@ use crate::context::ui::popup::popup_data::PopupData;
 use crate::context::ui::popup::dimensions::Dimensions;
 
 const GW2_WIKI_URL: &str = "https://wiki.guildwars2.com";
-const NO_INDENTATION: i32 = -1;
+const ITEM_ID_SPECIAL_SEARCH: &str = "/wiki/Special:RunQuery/Search_by_id?title=Special%3ARunQuery%2FSearch_by_id\
+            &pfRunQueryFormName=Search+by+id&Search_by_id=id%3D45105%26context%3DItem\
+            &wpRunQuery=&pf_free_text=\
+            &Search+by+id%5Bid%5D={}\
+            &Search+by+id%5Bcontext%5D=Item&wpRunQuery=&pf_free_text=";
 
 pub fn href_to_wiki_url(href: &String) -> String {
     debug!("[href_to_wiki_url] Formatting {href}");
@@ -111,14 +115,7 @@ fn fill_using_special_search(item_name: String, popup: &mut Popup) -> Option<Pop
 
 fn special_search_href(item_name: String, item_id: Option<u32>) -> String {
     if let Some(item_id) = item_id {
-        format!(
-            "/wiki/Special:RunQuery/Search_by_id?title=Special%3ARunQuery%2FSearch_by_id\
-            &pfRunQueryFormName=Search+by+id&Search_by_id=id%3D45105%26context%3DItem\
-            &wpRunQuery=&pf_free_text=\
-            &Search+by+id%5Bid%5D={}\
-            &Search+by+id%5Bcontext%5D=Item&wpRunQuery=&pf_free_text=",
-            item_id
-        )
+        format!("{ITEM_ID_SPECIAL_SEARCH}{item_id}")
     } else {
         format!("/index.php?search={item_name}&title=Special%3ASearch&profile=advanced&fulltext=1&ns0=1")
     }
@@ -179,9 +176,14 @@ pub fn fill_wiki_details(href: &String, popup: &mut Popup) -> bool {
                 fill_item_icon(&document, popup);
                 fill_tags(&document, popup);
                 fill_description(&document, popup);
-                fill_getting_there(&document, popup);
-                fill_acquisition(&document, popup);
-                fill_contents(&document, popup);
+                fill_data("h2:has(#Getting_there)", &document, &mut popup.data.getting_there);
+                fill_data("h2:has(#Acquisition)", &document, &mut popup.data.acquisition);
+                fill_data("h2:has(#Teaches_recipe)", &document, &mut popup.data.teaches_recipe);
+                fill_data("h2:has(#Contents)", &document, &mut popup.data.contents);
+                fill_data("h2:has(#Walkthrough)", &document, &mut popup.data.walkthrough);
+                fill_data("h2:has(#Rewards)", &document, &mut popup.data.rewards);
+                fill_data("h2:has(#Location)", &document, &mut popup.data.location);
+                fill_data("h2:has(#Related_achievements)", &document, &mut popup.data.related_achievements);
                 fill_notes(&document, popup);
                 fill_images(&document, popup);
                 true
@@ -245,23 +247,6 @@ fn skip_to_element<'a>(
     None
 }
 
-fn next_sibling_of_names<'a>(
-    mut next_elem: Option<NodeRef<'a, Node>>,
-    element_names: Vec<&str>,
-) -> Option<NodeRef<'a, Node>> {
-    while let Some(node) = next_elem {
-        trace!("[next_sibling_of_name] loop");
-        if let Some(element) = ElementRef::wrap(node) {
-            if element_names.contains(&element.value().name()) {
-                return Some(node);
-            }
-        }
-        next_elem = node.next_sibling();
-        continue;
-    }
-    None
-}
-
 fn fill_description(document: &Html, popup: &mut Popup) {
     let description_start_selector = Selector::parse(
         "div.mw-parser-output > p:not(:has(.wikipopup, script, small)):not(.mw-empty-elt)",
@@ -290,83 +275,22 @@ fn fill_description(document: &Html, popup: &mut Popup) {
     popup.data.description = description;
 }
 
-fn fill_getting_there(doc: &Html, popup: &mut Popup) {
+fn fill_data(selector: &str, doc: &Html, tokens: &mut Vec<Token>) {
     if let Some(doc_pos) = doc.select(
-        &Selector::parse("h2:has(#Getting_there)").unwrap()
+        &Selector::parse(selector).unwrap()
     ).next() {
         let mut next = doc_pos.next_sibling();
         while let Some(node) = next {
-            trace!("[fill_getting_there] loop");
+            trace!("[fill data] loop {selector}");
             if let Some(element) = ElementRef::wrap(node) {
                 let tag_name = element.value().name();
                 if !["dl", "ul", "p", "div", "h3", "table"].contains(&tag_name) {
                     break;
                 }
-                parse_node(&mut popup.data.getting_there, node);
+                parse_node(tokens, node);
             }
             next = node.next_sibling();
         }
-    }
-}
-
-fn fill_contents(doc: &Html, popup: &mut Popup) {
-    if let Some(doc_pos) = doc.select(
-        &Selector::parse("h2:has(#Contents)").unwrap()
-    ).next() {
-        let mut next = doc_pos.next_sibling();
-        while let Some(node) = next {
-            trace!("[fill_contents] loop");
-            if let Some(element) = ElementRef::wrap(node) {
-                let tag_name = element.value().name();
-                if !["dl", "ul", "p", "div", "h3", "table"].contains(&tag_name) {
-                    break;
-                }
-                parse_node(&mut popup.data.contents, node);
-            }
-            next = node.next_sibling();
-        }
-    }
-}
-
-
-fn fill_acquisition(doc: &Html, popup: &mut Popup) {
-    if let Some(doc_pos) = doc.select(
-        &Selector::parse("h2:has(#Acquisition)").unwrap()
-    ).next() {
-        let mut next = doc_pos.next_sibling();
-        while let Some(node) = next {
-            trace!("[fill_acquisition] loop");
-            if let Some(element) = ElementRef::wrap(node) {
-                let tag_name = element.value().name();
-                if !["dl", "ul", "p", "div", "h3", "table"].contains(&tag_name) {
-                    break;
-                }
-                parse_node(&mut popup.data.acquisition, node);
-            }
-            next = node.next_sibling();
-        }
-
-        // let mut next = start.next_sibling();
-        // while let Some(node) = next {
-        //     trace!("[fill_acquisition] loop");
-        //     if let Some(node) = skip_to_element(Some(node), "h3") {
-        //         parse_node(&mut acquisition, node);
-        //         next = node.next_sibling();
-        //         if let Some(div_node) = skip_to_element(node.next_sibling(), "div") {
-        //             parse_node(&mut acquisition, div_node);
-        //             next = div_node.next_sibling();
-        //             continue;
-        //         }
-        //     } else if let Some(node) = skip_to_element(Some(node), "ul") {
-        //         parse_node(&mut acquisition, node);
-        //         next = node.next_sibling();
-        //     } else if let Some(node) = skip_to_element(Some(node), "table") {
-        //         parse_node(&mut acquisition, node);
-        //         next = node.next_sibling();
-        //     } else {
-        //         break;
-        //     }
-        // }
     }
 }
 
@@ -487,7 +411,7 @@ fn parse_node(
     result: &mut Vec<Token>,
     node: NodeRef<Node>,
 ) {
-    parse_node_with_style(result, node, &mut Normal, &mut NO_INDENTATION);
+    parse_node_with_style(result, node, &mut Normal, &mut -1);
 }
 
 

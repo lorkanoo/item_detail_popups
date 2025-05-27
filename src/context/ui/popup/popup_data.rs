@@ -13,8 +13,13 @@ pub struct PopupData {
     pub description: Vec<Token>,
     pub getting_there: Vec<Token>,
     pub contents: Vec<Token>,
+    pub location: Vec<Token>,
     pub notes: Vec<Token>,
+    pub walkthrough: Vec<Token>,
+    pub rewards: Vec<Token>,
+    pub related_achievements: Vec<Token>,
     pub acquisition: Vec<Token>,
+    pub teaches_recipe: Vec<Token>,
     pub images: Vec<Token>,
     // tag href, tag name
     pub tags: BTreeMap<String, String>,
@@ -28,8 +33,13 @@ impl PopupData {
         !self.description.is_empty() 
             || !self.getting_there.is_empty()
             || !self.contents.is_empty()
+            || !self.location.is_empty()
             || !self.notes.is_empty()
             || !self.acquisition.is_empty()
+            || !self.teaches_recipe.is_empty()
+            || !self.walkthrough.is_empty()
+            || !self.rewards.is_empty()
+            || !self.related_achievements.is_empty()
             || !self.images.is_empty()
             || self.item_ids.is_some()
     }
@@ -44,8 +54,13 @@ impl Default for PopupData {
             description: vec![],
             getting_there: vec![],
             contents: vec![],
+            location: vec![],
             notes: vec![],
             acquisition: vec![],
+            teaches_recipe: vec![],
+            walkthrough: vec![],
+            rewards: vec![],
+            related_achievements: vec![],
             images: vec![],
             tags: BTreeMap::new(),
             cached_date: Local::now(),

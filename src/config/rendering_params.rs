@@ -13,7 +13,17 @@ pub struct RenderingParams {
     #[serde(default = "yes")]
     pub show_acquisition_tab: bool,
     #[serde(default = "yes")]
+    pub show_teaches_recipe_tab: bool,
+    #[serde(default = "yes")]
     pub show_getting_there_tab: bool,
+    #[serde(default = "yes")]
+    pub show_walkthrough_tab: bool,
+    #[serde(default = "yes")]
+    pub show_location_tab: bool,
+    #[serde(default = "yes")]
+    pub show_rewards_tab: bool,
+    #[serde(default = "yes")]
+    pub show_related_achievements_tab: bool,
     #[serde(default = "yes")]
     pub show_contents_tab: bool,
     #[serde(default = "yes")]
@@ -33,16 +43,20 @@ impl Default for RenderingParams {
             use_bullet_list_punctuation: yes(),
             show_general_tab: yes(),
             show_acquisition_tab: yes(),
+            show_teaches_recipe_tab: yes(),
             show_getting_there_tab: yes(),
             show_contents_tab: yes(),
             show_notes_tab: yes(),
+            show_location_tab: yes(),
+            show_walkthrough_tab: yes(),
+            show_rewards_tab: yes(),
+            show_related_achievements_tab: yes(),
             show_images_tab: yes(),
             show_tag_bar: yes(),
-            auto_pin_on_tab_hover: yes()
+            auto_pin_on_tab_hover: yes(),
         }
     }
 }
-
 
 fn default_link_color() -> [f32; 4] {
     [0.2, 0.4, 0.8, 1.0]

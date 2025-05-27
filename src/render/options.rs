@@ -41,7 +41,7 @@ impl Context {
 
     fn render_help(&mut self, ui: &Ui) {
         ui.text("This addon requires english in-game language to detect items properly.");
-        ui.text("To ask questions / report issues visit");
+        ui.text("To ask questions / report issues message me in game (lorkano.4609) or visit");
         ui.link("https://discord.com/channels/410828272679518241/1321117612209602601", "discord", Addon::read_config().rendering_params.link_color, true);
         ui.text("channel.");
         ui.text("Please make sure to read ");
@@ -93,15 +93,28 @@ impl Context {
             "Show contents tab##idp",
             &mut Addon::write_config().rendering_params.show_contents_tab,
         );
-
+        ui.checkbox(
+            "Show location tab##idp",
+            &mut Addon::write_config().rendering_params.show_location_tab,
+        );
         ui.checkbox(
             "Show getting there tab##idp",
             &mut Addon::write_config().rendering_params.show_getting_there_tab,
         );
         ui.checkbox(
+            "Show teaching recipe tab##idp",
+            &mut Addon::write_config().rendering_params.show_teaches_recipe_tab,
+        );
+
+        ui.checkbox(
             "Show notes tab##idp",
             &mut Addon::write_config().rendering_params.show_notes_tab,
         );
+        ui.checkbox(
+            "Show walkthrough tab##idp",
+            &mut Addon::write_config().rendering_params.show_walkthrough_tab,
+        );
+
         ui.checkbox(
             "Show images tab##idp",
             &mut Addon::write_config().rendering_params.show_images_tab,

@@ -4,6 +4,7 @@ use nexus::imgui::sys::{self, igGetMousePos};
 use nexus::imgui::{ColorEdit, ColorPreview, ComboBoxFlags, MouseButton, Selectable, SelectableFlags, StyleColor, Ui};
 use crate::context::Font;
 
+#[allow(dead_code)]
 pub trait UiExtended {
     fn mouse_in_bounds(&self, point_min: [f32; 2], point_max: [f32; 2]) -> bool;
     fn input_color_alpha(&self, ui: &Ui, label: impl AsRef<str>, color: &mut [f32; 4]) -> bool;
