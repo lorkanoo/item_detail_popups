@@ -3,7 +3,6 @@ use crate::api::gw2_wiki::href_to_wiki_url;
 use crate::cache::Cache;
 use crate::cache::Cacheable;
 use crate::cache::CachingStatus;
-use crate::config::rendering_params;
 use crate::config::rendering_params::RenderingParams;
 use crate::context::ui::popup::dimensions::Dimensions;
 use crate::context::ui::popup::Popup;
@@ -12,14 +11,11 @@ use crate::context::ui::popup::tag_params::TagParams;
 use crate::context::ui::popup::token::Token;
 use crate::context::Context;
 use crate::render::util::ui::{UiAction, COPPER_COLOR, GOLD_COLOR, HIGHLIGHT_COLOR, SILVER_COLOR};
-use log::info;
 use nexus::imgui::MenuItem;
-use nexus::imgui::TreeNodeFlags;
 use nexus::imgui::{sys, ChildWindow, MouseButton, Ui};
 use std::ptr;
 use util::ui::UiLink;
 use crate::context::Font;
-use crate::render::popup_data::Style::Bold;
 
 use super::util;
 use super::util::ui::extended::UiExtended;
@@ -74,10 +70,8 @@ impl Context {
         
         let window_width = ui.window_size()[0];
         let is_resizing = window_width != popup.width.unwrap_or(window_width);
-        if pinned_popup_vec_index.is_some() && !is_resizing {
-            if ui.close_button(format!("##idp_close{}", popup.id)) {
-                popup.opened = false
-            }
+        if pinned_popup_vec_index.is_some() && !is_resizing && ui.close_button(format!("##idp_close{}", popup.id)) {
+            popup.opened = false
         }
         popup.width = Some(window_width);
     }
@@ -94,7 +88,7 @@ impl Context {
 
     ) {
         let dimensions = match &popup.data.item_icon {
-            Some(Token::Image(href, dimensions)) => Self::render_image(ui, &href, &dimensions, cache),
+            Some(Token::Image(href, dimensions)) => Self::render_image(ui, href, dimensions, cache),
             _ => None
         };
         ui.same_line();
@@ -106,13 +100,11 @@ impl Context {
                 ui.text(&popup.data.title);
                 ui.spacing();
             }
+        } else if let Some(dimensions) = dimensions {
+            ui.text_vert_centered(&popup.data.title, &dimensions.height);
         } else {
-            if let Some(dimensions) = dimensions {
-                ui.text_vert_centered(&popup.data.title, &dimensions.height);
-            } else {
-                ui.text(&popup.data.title);
-                ui.spacing();
-            }
+            ui.text(&popup.data.title);
+            ui.spacing();
         }
     }
 
@@ -144,12 +136,12 @@ impl Context {
                     Self::render_tokens(
                         ui,
                         popup_pinned,
-                        &tokens,
+                        tokens,
                         ui_actions,
                         width_limit,
                         cache,
                         bold_font,
-                        &rendering_params
+                        rendering_params
                     );
                 };
                 if tokens.len() > TEXT_WRAP_LIMIT && !general_tab {
@@ -168,7 +160,7 @@ impl Context {
                 if !tokens.is_empty() {
                     ui.new_line();
                 }
-                if (item_ids.is_some()) {
+                if item_ids.is_some() {
                     Self::render_prices(ui, item_ids, cache);
                 }
             }
@@ -371,7 +363,7 @@ impl Context {
                 continue;
             }
             let final_word = if [".", ",", ":"].iter().any(|s| word.starts_with(s)) {
-                if (first_word) {
+                if first_word {
                     first_word = false;
                 } else {
                     ui.same_line();
@@ -411,7 +403,7 @@ impl Context {
     fn render_image(ui: &Ui, href: &str, dimensions: &Option<Dimensions>, cache: &mut Cache) -> Option<Dimensions> {
         if let Some(output) = dimensions.as_ref()
             .filter(|d| ui.not_in_view(&d.height))
-            .map(|d| Self::render_dummy(ui, &d, href))
+            .map(|d| Self::render_dummy(ui, d, href))
         {
             return output;
         }
@@ -425,7 +417,7 @@ impl Context {
                             Some(d) => d.tuple(),
                             None => (texture.width as f32, texture.height as f32)
                         };
-                        ui.invisible_button(href, [width as f32, height as f32]);
+                        ui.invisible_button(href, [width, height]);
                         ui.get_window_draw_list()
                             .add_image(texture.id(), ui.item_rect_min(), ui.item_rect_max())
                             .build();
@@ -441,8 +433,8 @@ impl Context {
 
     fn render_dummy(ui: &Ui, dimensions: &Dimensions, href: &str) -> Option<Dimensions> {
         let (width, height) = dimensions.tuple();
-        ui.invisible_button(href, [width as f32, height as f32]);
-        return Some(dimensions.clone());
+        ui.invisible_button(href, [width, height]);
+        Some(dimensions.clone())
     } 
 
     fn render_tag(
@@ -602,8 +594,8 @@ impl Context {
             Self::add_indent(ui, current_indent);
         }
         *starts_with_list = false;
-        if (use_bullet_list_punctuation) {
-            ui.text(current_indent.eq(&0).then_some("• ").unwrap_or("- "));
+        if use_bullet_list_punctuation {
+            ui.text(if current_indent.eq(&0) { "• " } else { "- " });
         } else {
             ui.text("- ");
         }

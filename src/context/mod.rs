@@ -6,12 +6,10 @@ use crate::cache::Cache;
 use crate::context::links::Links;
 use crate::context::ui::UiContext;
 use cloneable_clipboard::CloneableClipboard;
-use nexus::font::add_font_from_file;
 use nexus::imgui::sys::{self, ImFont};
 use std::ffi::CStr;
 use std::ptr::NonNull;
 use std::slice;
-use log::info;
 
 #[derive(Clone)]
 pub struct Context {

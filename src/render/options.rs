@@ -1,15 +1,9 @@
-use crate::config::{fonts_dir, game_dir};
 use crate::thread::load_fonts;
-use crate::util::shorten_path;
 use crate::{addon::Addon, context::Context};
 use log::debug;
-use nexus::imgui::{MouseButton, Ui};
-use rfd::FileDialog;
-use std::path::PathBuf;
+use nexus::imgui::Ui;
 use std::time::Duration;
-use std::borrow::Cow::Borrowed;
 use super::util::ui::extended::UiExtended;
-use std::thread;
 
 const MAX_REFRESH_HOURS: i32 = 10000;
 const MAX_REFRESH_MINUTES: i32 = 59;

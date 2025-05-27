@@ -7,7 +7,7 @@ use crate::context::ui::popup::style::Style::{self, Bold, Normal};
 use ego_tree::NodeRef;
 use scraper::selectable::Selectable;
 use crate::context::ui::popup::token::Token;
-use log::{debug, error, info, trace};
+use log::{debug, error, trace};
 use scraper::{CaseSensitivity, ElementRef, Html, Node, Selector};
 use std::fs::{self, File};
 use std::io::copy;
@@ -26,7 +26,7 @@ const ITEM_ID_SPECIAL_SEARCH: &str = "/wiki/Special:RunQuery/Search_by_id?title=
 
 pub fn href_to_wiki_url(href: &String) -> String {
     debug!("[href_to_wiki_url] Formatting {href}");
-    let mut result = format!("{}{}", GW2_WIKI_URL, href.replace('"', "%22"));
+    let result = format!("{}{}", GW2_WIKI_URL, href.replace('"', "%22"));
     debug!("[href_to_wiki_url] Result {result}");
     result
 }

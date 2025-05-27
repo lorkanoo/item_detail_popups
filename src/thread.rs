@@ -8,14 +8,11 @@ use log::{debug, error, info};
 use nexus::font::{add_font_from_file, RawFontReceive};
 use nexus::font_receive;
 use nexus::imgui::sys::ImFontConfig;
-use rfd::FileDialog;
 use std::fs::File;
 use std::io::Write;
-use std::path::PathBuf;
 use std::time::Duration;
 use std::{fs, thread};
 use crate::context::Font;
-use crate::util::shorten_path;
 use nexus::imgui::sys;
 
 const MAIN_THREAD_SLEEP_DURATION_MS: u64 = 500;
