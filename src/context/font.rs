@@ -17,7 +17,6 @@ impl Font {
     }
 
     pub unsafe fn get_all() -> impl Iterator<Item = Self> {
-        // SAFETY: no idea
         let io = sys::igGetIO();
         let atlas = (*io).Fonts;
         let data = (*atlas).Fonts.Data;
@@ -31,7 +30,6 @@ impl Font {
     }
 
     pub unsafe fn name_raw<'a>(&self) -> &'a CStr {
-        // SAFETY: no idea
         CStr::from_ptr(sys::ImFont_GetDebugName(self.as_ptr()))
     }
 

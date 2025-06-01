@@ -61,7 +61,7 @@ impl Context {
             .title_bar(false)
             .size_constraints(
                 [
-                    (&title_text_size[0]
+                    (title_text_size[0]
                         + title_image_width
                         + CLOSE_BUTTON_SIZE
                         + CLOSE_BUTTON_MARGIN_OUTER_X
