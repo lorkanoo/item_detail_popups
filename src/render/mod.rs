@@ -6,6 +6,7 @@ mod hovered_popup;
 mod options;
 mod pinned_popup;
 pub mod popup_data;
+pub mod token_renderer;
 pub mod util;
 
 impl Context {

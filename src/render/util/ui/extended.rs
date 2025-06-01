@@ -1,11 +1,15 @@
 use std::borrow::Cow;
 
-use crate::context::Font;
 use nexus::imgui::sys::{self, igGetMousePos};
 use nexus::imgui::{
     ColorEdit, ColorPreview, ComboBoxFlags, MouseButton, Selectable, SelectableFlags, StyleColor,
     Ui,
 };
+
+use crate::context::font::Font;
+
+pub const CLOSE_BUTTON_SIZE: f32 = 25.0;
+pub const CLOSE_BUTTON_MARGIN_OUTER_X: f32 = 15.0;
 
 #[allow(dead_code)]
 pub trait UiExtended {
@@ -14,8 +18,9 @@ pub trait UiExtended {
     fn selected_file<L: AsRef<str>, F: Fn()>(&self, title: L, label: L, buf: &mut String, func: F);
     fn link<T: AsRef<str>>(&self, link: &str, text: T, color: [f32; 4], inline: bool);
     fn font_select(&self, label: impl AsRef<str>, current: &mut Option<Font>) -> bool;
-    fn text_vert_centered(&self, text: impl AsRef<str>, height: &f32);
-    fn close_button(&self, text: impl AsRef<str>) -> bool;
+    fn text_vert_centered(&self, text: impl AsRef<str>, height: &f32, disabled: &bool);
+    fn text_or_disabled(&self, text: impl AsRef<str>, should_render_disabled: &bool);
+    fn close_button(&self, text: impl AsRef<str>, x_pos_limit: &f32) -> bool;
     fn not_in_view(&self, height: &f32) -> bool;
 }
 
@@ -107,26 +112,38 @@ impl UiExtended for Ui<'_> {
         changed
     }
 
-    fn text_vert_centered(&self, text: impl AsRef<str>, height: &f32) {
+    fn text_vert_centered(&self, text: impl AsRef<str>, height: &f32, disabled: &bool) {
         let text_height = self.calc_text_size(&text)[1];
         let cur_pos = self.cursor_pos();
         self.set_cursor_pos([
             cur_pos[0],
             cur_pos[1] + (height / 2.0) - (text_height / 2.0),
         ]);
-        self.text(&text);
+        self.text_or_disabled(text, disabled);
     }
 
-    fn close_button(&self, text: impl AsRef<str>) -> bool {
+    fn text_or_disabled(&self, text: impl AsRef<str>, should_render_disabled: &bool) {
+        if *should_render_disabled {
+            self.text_disabled(&text);
+        } else {
+            self.text(&text);
+        }
+    }
+
+    fn close_button(&self, text: impl AsRef<str>, x_pos_limit: &f32) -> bool {
         let style = self.push_style_var(nexus::imgui::StyleVar::FrameBorderSize(0.0));
-        let button_dimension = 25.0;
-        let margin_outer = 8.0;
+        let button_dimension = CLOSE_BUTTON_SIZE;
+        let margin_outer_x = CLOSE_BUTTON_MARGIN_OUTER_X;
+        let margin_outer_y = 10.0;
         let margin_inner = 4.0;
 
         let window_size = self.window_size();
         self.set_cursor_pos([
-            window_size[0] - button_dimension - margin_outer,
-            margin_outer,
+            f32::min(
+                window_size[0] - button_dimension - margin_outer_x,
+                x_pos_limit - button_dimension - margin_outer_x,
+            ),
+            margin_outer_y,
         ]);
         let result = self.button_with_size(&text, [button_dimension, button_dimension]);
 

@@ -1,6 +1,7 @@
 use crate::addon::VERSION;
 use crate::cache::Persistent;
 
+use keyboard_layout::KeyboardLayout;
 use log::{info, warn};
 use nexus::paths::{get_addon_dir, get_game_dir};
 use rendering_params::RenderingParams;
@@ -10,14 +11,14 @@ use std::io::{BufReader, BufWriter};
 use std::path::PathBuf;
 use std::time::Duration;
 
+pub mod keyboard_layout;
 pub mod rendering_params;
-
+pub const DEFAULT_POST_KEY_COMBINATION_DELAY_MS: u64 = 50;
 const DEFAULT_POPUP_DATA_CACHE_EXPIRATION_SECS: u64 = 36 * 3600;
 const DEFAULT_MAX_POPUP_DATA_CACHE_ELEMENTS: usize = 300;
 const DEFAULT_PRICE_EXPIRATION_DURATION: Duration = Duration::from_secs(60);
 const DEFAULT_TEXTURE_EXPIRATION_DURATION: Duration = Duration::from_secs(7 * 24 * 60 * 60);
 const DEFAULT_BOLD_FONT_NAME: &str = "IDP_default_bold";
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     #[serde(default = "default_version")]
@@ -31,12 +32,14 @@ pub struct Config {
     pub selected_bold_font_name: Option<String>,
     #[serde(default = "yes")]
     pub wait_until_all_keys_released: bool,
+    #[serde(default = "default_post_key_combination_delay_ms")]
+    pub post_key_combination_delay_ms: u64,
     #[serde(default = "yes")]
     pub close_on_mouse_away: bool,
-    #[serde(default = "no")]
-    pub allow_collapsing_popups: bool,
     #[serde(default = "RenderingParams::default")]
     pub rendering_params: RenderingParams,
+    #[serde(default = "KeyboardLayout::default")]
+    pub keyboard_layout: KeyboardLayout,
 }
 
 impl Default for Config {
@@ -51,9 +54,10 @@ impl Default for Config {
             max_texture_expiration_duration: DEFAULT_TEXTURE_EXPIRATION_DURATION,
             selected_bold_font_name: default_bold_font_name(),
             wait_until_all_keys_released: yes(),
+            post_key_combination_delay_ms: 50,
             close_on_mouse_away: yes(),
-            allow_collapsing_popups: no(),
             rendering_params: RenderingParams::default(),
+            keyboard_layout: KeyboardLayout::default(),
         }
     }
 }
@@ -125,6 +129,10 @@ fn default_price_expiration() -> Duration {
 
 fn default_bold_font_name() -> Option<String> {
     Some(DEFAULT_BOLD_FONT_NAME.to_string())
+}
+
+fn default_post_key_combination_delay_ms() -> u64 {
+    DEFAULT_POST_KEY_COMBINATION_DELAY_MS
 }
 
 pub fn no() -> bool {

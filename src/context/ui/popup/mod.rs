@@ -2,7 +2,6 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use once_cell::sync::Lazy;
 use popup_data::PopupData;
-use serde::{Deserialize, Serialize};
 pub mod dimensions;
 pub mod popup_data;
 pub mod style;
@@ -18,13 +17,13 @@ static POPUP_ID_COUNTER: Lazy<AtomicU64> = Lazy::new(|| {
     )
 });
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug)]
 pub struct Popup {
-    #[serde(skip_serializing)]
-    #[serde(skip_deserializing)]
     pub id: u64,
     pub opened: bool,
     pub pinned: bool,
+    pub collapsed: bool,
+    pub title_dragging: bool,
     pub pos: Option<[f32; 2]>,
     pub width: Option<f32>,
     pub data: PopupData,
@@ -37,9 +36,11 @@ impl Popup {
             id,
             opened: false,
             pinned: false,
+            title_dragging: false,
             pos: None,
             width: None,
             data,
+            collapsed: false,
         }
     }
 }

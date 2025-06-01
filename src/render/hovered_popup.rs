@@ -13,15 +13,12 @@ impl Context {
                 popup.opened = true;
             }
             ui.popup("##popup_idp", || {
-                let width_limit = 640.0;
-
                 ui.group(|| {
                     Self::render_popup_data(
                         ui,
                         None,
                         popup,
                         &mut ui_actions,
-                        width_limit,
                         &mut self.cache,
                         &self.bold_font,
                     );

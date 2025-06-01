@@ -1,14 +1,16 @@
-use crate::context::Font;
+use crate::context::{font::Font, ui::popup::dimensions::Dimensions};
 use nexus::imgui::{Condition, Ui, Window};
 
 use crate::{
-    addon::Addon,
     cache::Cache,
     context::{ui::popup::Popup, Context},
     thread::{open_link_thread, refresh_popup_thread},
 };
 
-use super::util::ui::UiAction;
+use super::util::ui::{
+    extended::{CLOSE_BUTTON_MARGIN_OUTER_X, CLOSE_BUTTON_SIZE},
+    UiAction,
+};
 
 impl Context {
     pub fn render_pinned_popups(&mut self, ui: &Ui) {
@@ -46,18 +48,26 @@ impl Context {
         cache: &mut Cache,
         bold_font: &Option<Font>,
     ) {
-        let size = ui.calc_text_size(&popup.data.title);
+        let title_text_size = ui.calc_text_size(&popup.data.title);
         let screen_height = ui.io().display_size[1];
         let mut is_opened = popup.opened;
+        let title_image_width = Dimensions::medium().width;
+        let additional_title_width = 30.0;
         Window::new(format!("##idp{}", popup.id))
             .position(popup.pos.unwrap_or([0.0, 0.0]), Condition::Appearing)
-            .collapsible(Addon::read_config().allow_collapsing_popups)
             .always_auto_resize(true)
             .save_settings(false)
             .opened(&mut is_opened)
             .title_bar(false)
             .size_constraints(
-                [(&size[0] + 40.0 + 24.0) * 1.25, &size[1] * 1.0],
+                [
+                    (&title_text_size[0]
+                        + title_image_width
+                        + CLOSE_BUTTON_SIZE
+                        + CLOSE_BUTTON_MARGIN_OUTER_X
+                        + additional_title_width),
+                    title_text_size[1],
+                ],
                 [f32::MAX, screen_height * 0.5],
             )
             .build(ui, || {
@@ -66,7 +76,6 @@ impl Context {
                     Some(popup_vec_index),
                     popup,
                     ui_actions,
-                    640.0,
                     cache,
                     bold_font,
                 );

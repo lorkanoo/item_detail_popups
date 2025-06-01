@@ -1,9 +1,12 @@
 use super::util::ui::extended::UiExtended;
+use crate::config::keyboard_layout::KeyboardLayout;
+use crate::config::DEFAULT_POST_KEY_COMBINATION_DELAY_MS;
 use crate::thread::load_fonts;
 use crate::{addon::Addon, context::Context};
 use log::debug;
-use nexus::imgui::Ui;
+use nexus::imgui::{TreeNodeFlags, Ui};
 use std::time::Duration;
+use strum::IntoEnumIterator;
 
 const MAX_REFRESH_HOURS: i32 = 10000;
 const MAX_REFRESH_MINUTES: i32 = 59;
@@ -33,6 +36,7 @@ impl Context {
 
     fn render_help(&mut self, ui: &Ui) {
         ui.text("This addon requires english in-game language to detect items properly.");
+        ui.text("In case of problems while using non-QWERTY keyboard, change keyboard layout under advanced settings.");
         ui.text("To ask questions / report issues message me in game (lorkano.4609) or visit");
         ui.link(
             "https://discord.com/channels/410828272679518241/1321117612209602601",
@@ -41,7 +45,7 @@ impl Context {
             true,
         );
         ui.text("channel.");
-        ui.text("Please make sure to read ");
+        ui.text("Please make sure to read");
         ui.link(
             "https://github.com/lorkanoo/item_detail_popups",
             "usage guide",
@@ -73,64 +77,17 @@ impl Context {
 
     fn render_style_options(&mut self, ui: &Ui) {
         self.render_bold_font_options(ui);
-        ui.text("Link color:");
-        ui.input_color_alpha(
-            ui,
-            "##idp_link_color",
-            &mut Addon::write_config().rendering_params.link_color,
-        );
         ui.checkbox(
             "Use bullet character in list punctuation##idp",
             &mut Addon::write_config()
                 .rendering_params
                 .use_bullet_list_punctuation,
         );
-        ui.checkbox(
-            "Show general tab##idp",
-            &mut Addon::write_config().rendering_params.show_general_tab,
-        );
-        ui.checkbox(
-            "Show acquisition tab##idp",
-            &mut Addon::write_config().rendering_params.show_acquisition_tab,
-        );
-        ui.checkbox(
-            "Show contents tab##idp",
-            &mut Addon::write_config().rendering_params.show_contents_tab,
-        );
-        ui.checkbox(
-            "Show location tab##idp",
-            &mut Addon::write_config().rendering_params.show_location_tab,
-        );
-        ui.checkbox(
-            "Show getting there tab##idp",
-            &mut Addon::write_config()
-                .rendering_params
-                .show_getting_there_tab,
-        );
-        ui.checkbox(
-            "Show teaching recipe tab##idp",
-            &mut Addon::write_config()
-                .rendering_params
-                .show_teaches_recipe_tab,
-        );
+        self.render_max_content_width(ui);
+        self.render_content_margin_right(ui);
 
-        ui.checkbox(
-            "Show notes tab##idp",
-            &mut Addon::write_config().rendering_params.show_notes_tab,
-        );
-        ui.checkbox(
-            "Show walkthrough tab##idp",
-            &mut Addon::write_config().rendering_params.show_walkthrough_tab,
-        );
-
-        ui.checkbox(
-            "Show images tab##idp",
-            &mut Addon::write_config().rendering_params.show_images_tab,
-        );
-        ui.checkbox(
-            "Show tag bar##idp",
-            &mut Addon::write_config().rendering_params.show_tag_bar,
-        );
+        render_color_options(ui);
+        render_visibility_options(ui);
     }
 
     fn render_advanced_options(&mut self, ui: &Ui) {
@@ -143,13 +100,11 @@ impl Context {
             &mut Addon::write_config().close_on_mouse_away,
         );
         ui.checkbox(
-            "Allow collapsing popups##idp",
-            &mut Addon::write_config().allow_collapsing_popups,
-        );
-        ui.checkbox(
             "Pin on tab hover##idp",
             &mut Addon::write_config().rendering_params.auto_pin_on_tab_hover,
         );
+        render_keyboard_layout(ui);
+        self.render_post_key_combination_delay(ui);
     }
 
     fn render_cache_options(&mut self, ui: &Ui) {
@@ -242,6 +197,51 @@ impl Context {
         }
     }
 
+    fn render_post_key_combination_delay(&mut self, ui: &Ui<'_>) {
+        debug!("[render_post_key_combination_delay] Started.");
+        let post_key_combination_delay_ms = Addon::read_config().post_key_combination_delay_ms;
+        if let Ok(mut new) = i32::try_from(post_key_combination_delay_ms) {
+            ui.text("Macro delay (ms)");
+            ui.same_line();
+            ui.text_disabled("(too low values will cause popups not opening)");
+            ui.input_int("##idp_pcd", &mut new)
+                .step(10 as _)
+                .step_fast(100 as _)
+                .build();
+            new = new.clamp(10, 300);
+            Addon::write_config().post_key_combination_delay_ms = new as u64;
+        } else {
+            Addon::write_config().post_key_combination_delay_ms =
+                DEFAULT_POST_KEY_COMBINATION_DELAY_MS;
+        }
+    }
+
+    fn render_max_content_width(&mut self, ui: &Ui<'_>) {
+        debug!("[render_max_content_width] Started.");
+        let max_content_width = Addon::read_config().rendering_params.max_content_width;
+        let mut new = max_content_width.round() as i32;
+        ui.text("Max popup width:");
+        ui.input_int("##idp_max_content_width", &mut new)
+            .step(50 as _)
+            .step_fast(200 as _)
+            .build();
+        new = new.clamp(320, 1500);
+        Addon::write_config().rendering_params.max_content_width = new as f32;
+    }
+
+    fn render_content_margin_right(&mut self, ui: &Ui<'_>) {
+        debug!("[render_content_margin_right] Started.");
+        let content_margin_right = Addon::read_config().rendering_params.content_margin_right;
+        let mut new = content_margin_right.round() as i32;
+        ui.text("Content margin right:");
+        ui.input_int("##idp_content_margin_right", &mut new)
+            .step(10 as _)
+            .step_fast(20 as _)
+            .build();
+        new = new.clamp(0, 100);
+        Addon::write_config().rendering_params.content_margin_right = new as f32;
+    }
+
     fn render_cache_used(&mut self, ui: &Ui<'_>) {
         debug!("[render_cache_used] Started.");
         let mut cache_used = 0.00;
@@ -258,4 +258,98 @@ impl Context {
             self.cache.evict();
         }
     }
+}
+
+fn render_visibility_options(ui: &Ui<'_>) {
+    if ui.collapsing_header("Visibility##idp", TreeNodeFlags::SPAN_AVAIL_WIDTH) {
+        ui.checkbox(
+            "Show general tab##idp",
+            &mut Addon::write_config().rendering_params.show_general_tab,
+        );
+        ui.checkbox(
+            "Show acquisition tab##idp",
+            &mut Addon::write_config().rendering_params.show_acquisition_tab,
+        );
+        ui.checkbox(
+            "Show contents tab##idp",
+            &mut Addon::write_config().rendering_params.show_contents_tab,
+        );
+        ui.checkbox(
+            "Show location tab##idp",
+            &mut Addon::write_config().rendering_params.show_location_tab,
+        );
+        ui.checkbox(
+            "Show getting there tab##idp",
+            &mut Addon::write_config()
+                .rendering_params
+                .show_getting_there_tab,
+        );
+        ui.checkbox(
+            "Show teaching recipe tab##idp",
+            &mut Addon::write_config()
+                .rendering_params
+                .show_teaches_recipe_tab,
+        );
+        ui.checkbox(
+            "Show notes tab##idp",
+            &mut Addon::write_config().rendering_params.show_notes_tab,
+        );
+        ui.checkbox(
+            "Show walkthrough tab##idp",
+            &mut Addon::write_config().rendering_params.show_walkthrough_tab,
+        );
+
+        ui.checkbox(
+            "Show images tab##idp",
+            &mut Addon::write_config().rendering_params.show_images_tab,
+        );
+        ui.checkbox(
+            "Show tag bar##idp",
+            &mut Addon::write_config().rendering_params.show_tag_bar,
+        );
+    }
+}
+
+fn render_color_options(ui: &Ui<'_>) {
+    if ui.collapsing_header("Colors##idp", TreeNodeFlags::SPAN_AVAIL_WIDTH) {
+        ui.text("Link color:");
+        ui.input_color_alpha(
+            ui,
+            "##idp_link_color",
+            &mut Addon::write_config().rendering_params.link_color,
+        );
+        ui.text("Gold coin color:");
+        ui.input_color_alpha(
+            ui,
+            "##idp_gold_coin_color",
+            &mut Addon::write_config().rendering_params.gold_coin_color,
+        );
+        ui.text("Silver coin color:");
+        ui.input_color_alpha(
+            ui,
+            "##idp_silver_coin_color",
+            &mut Addon::write_config().rendering_params.silver_coin_color,
+        );
+        ui.text("Copper coin color:");
+        ui.input_color_alpha(
+            ui,
+            "##idp_copper_coin_color",
+            &mut Addon::write_config().rendering_params.copper_coin_color,
+        );
+    }
+}
+
+fn render_keyboard_layout(ui: &Ui<'_>) {
+    let layouts: Vec<KeyboardLayout> = KeyboardLayout::iter().collect();
+    let mut current_item = layouts
+        .iter()
+        .position(|v| *v == Addon::read_config().keyboard_layout)
+        .unwrap();
+
+    ui.text("Keyboard layout:");
+    ui.combo("##kl_idp", &mut current_item, &layouts, |selected_layout| {
+        format!("{}", selected_layout).into()
+    });
+    Addon::write_config().keyboard_layout =
+        layouts.get(current_item).expect("Expected layout").clone();
 }

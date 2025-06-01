@@ -1,21 +1,18 @@
-use crate::addon::Addon;
+use crate::{addon::Addon, config::keyboard_layout::KeyboardLayout};
 use device_query::{DeviceQuery, DeviceState};
 use enigo::{
-    Button, Direction,
-    Direction::{Click, Press, Release},
+    Button,
+    Direction::{self, Click, Press, Release},
     Enigo, Key, Keyboard, Mouse, Settings,
 };
 
 use log::{debug, error};
-use serde::{Deserialize, Serialize};
-use std::fmt::Formatter;
+use std::thread;
 use std::time::Duration;
-use std::{fmt, thread};
 
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq, Default)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq, Default)]
 pub struct KeyCombination {
-    pub key: Option<char>,
-    pub key_code: Option<u32>,
+    pub key: Option<Key>,
     pub ctrl: bool,
     pub shift: bool,
     pub alt: bool,
@@ -31,50 +28,34 @@ impl KeyCombination {
         }
     }
     pub fn select_all() -> Self {
+        let key = match Addon::read_config().keyboard_layout {
+            KeyboardLayout::QWERTY => Key::A,
+            KeyboardLayout::AZERTY => Key::Other(81),
+        };
         KeyCombination {
-            key: Some('a'),
+            key: Some(key),
             ctrl: true,
             ..KeyCombination::default()
         }
     }
     pub fn cut() -> Self {
         KeyCombination {
-            key: Some('x'),
+            key: Some(Key::X),
             ctrl: true,
             ..KeyCombination::default()
         }
     }
     pub fn enter() -> Self {
         KeyCombination {
-            key_code: Some(13),
+            key: Some(Key::Return),
             ..KeyCombination::default()
         }
     }
     pub fn backspace() -> Self {
         KeyCombination {
-            key_code: Some(8),
+            key: Some(Key::Backspace),
             ..KeyCombination::default()
         }
-    }
-}
-
-impl fmt::Display for KeyCombination {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let mut result = "".to_string();
-        if self.ctrl {
-            result.push_str("Ctrl+");
-        }
-        if self.shift {
-            result.push_str("Shift+");
-        }
-        if self.alt {
-            result.push_str("Alt+");
-        }
-        if let Some(ch) = &self.key {
-            result.push(*ch);
-        }
-
-        write!(f, "{}", result)
     }
 }
 
@@ -89,7 +70,14 @@ pub fn trigger_key_combination(key_combination: &KeyCombination) {
     debug!("[trigger_key_combination] combination: {key_combination:?}");
     let mut enigo = Enigo::new(&Settings::default()).unwrap();
     let mut retries = 75;
-    let should_wait_for_key_release = Addon::read_config().wait_until_all_keys_released;
+    let (should_wait_for_key_release, post_key_combination_delay_ms) = {
+        let config = Addon::read_config();
+        (
+            config.wait_until_all_keys_released,
+            config.post_key_combination_delay_ms,
+        )
+    };
+
     while should_wait_for_key_release && retries > 0 {
         if all_keys_released() {
             break;
@@ -116,10 +104,8 @@ pub fn trigger_key_combination(key_combination: &KeyCombination) {
     if key_combination.left_click {
         mouse_buttons.push(Button::Left)
     }
-    if let Some(key_code) = &key_combination.key_code {
-        keys.push(Key::Other(*key_code));
-    } else if let Some(ch) = &key_combination.key {
-        keys.push(Key::Unicode(*ch))
+    if let Some(key) = &key_combination.key {
+        keys.push(*key)
     }
 
     for key in &keys {
@@ -130,7 +116,7 @@ pub fn trigger_key_combination(key_combination: &KeyCombination) {
         mouse_button_action(&mut enigo, button, Click);
     }
 
-    thread::sleep(Duration::from_millis(20));
+    thread::sleep(Duration::from_millis(post_key_combination_delay_ms));
 
     for key in &keys {
         keyboard_key_action(&mut enigo, key, Release)

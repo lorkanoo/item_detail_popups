@@ -35,14 +35,14 @@ impl Addon {
                         }
 
                         cut_all_and_close_chat();
-                        thread::sleep(Duration::from_millis(20));
+                        thread::sleep(Duration::from_millis(30));
 
                         if has_clipboard_changed(&last_clipboard_text) {
                             break;
                         }
 
                         copy_attempts += 1;
-                        thread::sleep(Duration::from_millis(20));
+                        thread::sleep(Duration::from_millis(30));
                     }
                     process_clipboard_text();
 

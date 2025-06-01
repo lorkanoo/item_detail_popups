@@ -3,8 +3,8 @@ use crate::api::gw2_wiki::{prepare_href_popup, prepare_item_popup};
 use crate::cache::{is_cache_expired, Cacheable};
 use crate::config::{fonts_dir, textures_dir};
 
-use crate::context::Font;
-use crate::render::popup_data::{COPPER_COIN_HREF, GOLD_COIN_HREF, SILVER_COIN_HREF};
+use crate::context::font::Font;
+use crate::render::popup_data::price::{COPPER_COIN_HREF, GOLD_COIN_HREF, SILVER_COIN_HREF};
 use log::{debug, error, info};
 use nexus::font::{add_font_from_file, RawFontReceive};
 use nexus::font_receive;
