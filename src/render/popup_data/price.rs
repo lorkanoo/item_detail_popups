@@ -1,7 +1,7 @@
-use crate::cache::Cache;
-use crate::cache::Cacheable;
-use crate::config::rendering_params::RenderingParams;
-use crate::context::Context;
+use crate::state::cache::cache::Cache;
+use crate::state::cache::cache::StoreInCache;
+use crate::configuration::popup::rendering_params::RenderingParams;
+use crate::state::context::Context;
 use nexus::imgui::Ui;
 
 pub const GOLD_COIN_HREF: &str = "/images/thumb/d/d1/Gold_coin.png/18px-Gold_coin.png";

@@ -1,5 +1,5 @@
-use crate::cache::CachedData;
-use crate::config::config_dir;
+use crate::state::cache::cached_data::CachedData;
+use crate::configuration::config::config_dir;
 use log::info;
 use log::warn;
 use std::collections::HashMap;
@@ -7,12 +7,12 @@ use std::fs::File;
 use std::io::{BufReader, BufWriter};
 use std::path::PathBuf;
 
-use super::Cacheable;
-use super::Persistent;
+use crate::state::cache::cache::Persist;
+use crate::state::cache::cache::StoreInCache;
 
 pub type ItemNamesCache = HashMap<String, Vec<u32>>;
 
-impl Persistent for CachedData<ItemNamesCache> {
+impl Persist for CachedData<ItemNamesCache> {
     fn load(&mut self) {
         let path = CachedData::<ItemNamesCache>::file_path();
         let file_opt = File::open(&path)
@@ -62,7 +62,7 @@ impl Persistent for CachedData<ItemNamesCache> {
     }
 }
 
-impl<'a> Cacheable<'a, CachedData<ItemNamesCache>, &'a ItemNamesCache>
+impl<'a> StoreInCache<'a, CachedData<ItemNamesCache>, &'a ItemNamesCache>
     for CachedData<ItemNamesCache>
 {
     fn retrieve(&'a mut self, _key: ()) -> Option<&'a ItemNamesCache> {

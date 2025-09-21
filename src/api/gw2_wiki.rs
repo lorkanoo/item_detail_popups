@@ -1,14 +1,13 @@
-use crate::addon::Addon;
-use crate::api::get_sync;
-use crate::cache::texture::identifier_to_filename;
-use crate::cache::Cacheable;
-use crate::config::textures_dir;
-use crate::context::ui::popup::dimensions::Dimensions;
-use crate::context::ui::popup::popup_data::PopupData;
-use crate::context::ui::popup::style::Style::{self, Bold, Normal};
-use crate::context::ui::popup::tag_params::TagParams;
-use crate::context::ui::popup::token::Token;
-use crate::context::ui::popup::Popup;
+use crate::core::http_client::get_sync;
+use crate::state::cache::texture::identifier_to_filename;
+use crate::state::cache::cache::StoreInCache;
+use crate::configuration::config::textures_dir;
+use crate::state::popup::dimensions::Dimensions;
+use crate::state::popup::popup_data::PopupData;
+use crate::state::popup::style::Style::{self, Bold, Normal};
+use crate::state::popup::tag_params::TagParams;
+use crate::state::popup::token::Token;
+use crate::state::popup::Popup;
 use ego_tree::NodeRef;
 use log::{debug, error, trace};
 use scraper::selectable::Selectable;
@@ -16,6 +15,7 @@ use scraper::{CaseSensitivity, ElementRef, Html, Node, Selector};
 use std::fs::{self, File};
 use std::io::copy;
 use std::ops::Deref;
+use crate::state::context::{read_context, write_context};
 
 const GW2_WIKI_URL: &str = "https://wiki.guildwars2.com";
 const ITEM_ID_SPECIAL_SEARCH: &str =
@@ -39,8 +39,8 @@ pub fn prepare_item_popup(item_name: &str) -> Popup {
     );
     let item_name_href = format!("/wiki/{}", item_name.replace(" ", "_"));
     let mut popup = prepare_popup(&item_name_href, item_name.to_owned());
-    Addon::write_context().ui.loading_progress = Some(10);
-    if let Some(mut cached_data) = Addon::write_context()
+    write_context().ui.loading_progress = Some(10);
+    if let Some(mut cached_data) = write_context()
         .cache
         .popup_data_map
         .retrieve(&item_name_href)
@@ -50,16 +50,16 @@ pub fn prepare_item_popup(item_name: &str) -> Popup {
         return Popup::new(cached_data);
     }
     if !fill_wiki_details(&item_name_href, &mut popup) {
-        Addon::write_context().ui.loading_progress = Some(50);
+        write_context().ui.loading_progress = Some(50);
         if let Some(mut popup) = fill_using_special_search(item_name.to_string(), &mut popup) {
-            Addon::write_context()
+            write_context()
                 .cache
                 .popup_data_map
                 .store(&item_name_href, &mut popup.data);
             return popup;
         }
     }
-    Addon::write_context()
+    write_context()
         .cache
         .popup_data_map
         .store(&item_name_href, &mut popup.data);
@@ -94,7 +94,7 @@ fn fill_using_special_search(item_name: String, popup: &mut Popup) -> Option<Pop
     let special_search_result = special_search(id, &special_search_href(item_name, id));
     if let Some(result) = special_search_result {
         let redirection_href = result.0;
-        let mut context = Addon::write_context();
+        let mut context = write_context();
         if let Some(mut cached_data) = context.cache.popup_data_map.retrieve(&redirection_href) {
             context
                 .cache
@@ -106,7 +106,7 @@ fn fill_using_special_search(item_name: String, popup: &mut Popup) -> Option<Pop
         popup.data.redirection_href = Some(redirection_href.clone());
         drop(context);
         fill_wiki_details(&redirection_href, popup);
-        Addon::write_context()
+        write_context()
             .cache
             .popup_data_map
             .store(&redirection_href, &mut popup.data);
@@ -127,10 +127,10 @@ pub fn prepare_href_popup(href: &String, title: String) -> Popup {
         "[prepare_href_popup] Preparing popup for href: {} and title: {}",
         href, title
     );
-    Addon::write_context().ui.loading_progress = Some(10);
-    let cached_data_opt = Addon::write_context().cache.popup_data_map.retrieve(href);
+    write_context().ui.loading_progress = Some(10);
+    let cached_data_opt = write_context().cache.popup_data_map.retrieve(href);
     if let Some(mut cached_data) = cached_data_opt {
-        if let Some(item_names) = Addon::write_context().cache.item_names.retrieve(()) {
+        if let Some(item_names) = write_context().cache.item_names.retrieve(()) {
             cached_data.item_ids = item_names.get(&title).cloned();
         }
         return Popup::new(cached_data);
@@ -138,7 +138,7 @@ pub fn prepare_href_popup(href: &String, title: String) -> Popup {
 
     let mut popup = prepare_popup(href, title);
     fill_wiki_details(href, &mut popup);
-    Addon::write_context()
+    write_context()
         .cache
         .popup_data_map
         .store(href, &mut popup.data);
@@ -155,7 +155,7 @@ fn prepare_popup(href: &str, title: String) -> Popup {
         href: href.to_owned(),
         ..PopupData::default()
     };
-    if let Some(item_names) = Addon::read_context().cache.item_names.value() {
+    if let Some(item_names) = read_context().cache.item_names.value() {
         data.item_ids = item_names.get(&title).cloned();
     }
     Popup::new(data)

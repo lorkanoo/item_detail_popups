@@ -1,16 +1,11 @@
-use crate::context::{font::Font, ui::popup::dimensions::Dimensions};
+use crate::state::font::Font;
 use nexus::imgui::{Condition, Ui, Window};
-
-use crate::{
-    cache::Cache,
-    context::{ui::popup::Popup, Context},
-    thread::{open_link_thread, refresh_popup_thread},
-};
-
-use super::util::ui::{
-    extended::{CLOSE_BUTTON_MARGIN_OUTER_X, CLOSE_BUTTON_SIZE},
-    UiAction,
-};
+use crate::core::utils::ui::{UiAction, CLOSE_BUTTON_MARGIN_OUTER_X, CLOSE_BUTTON_SIZE};
+use crate::state::cache::cache::Cache;
+use crate::state::context::Context;
+use crate::state::threads::link::open_link_thread;
+use crate::state::threads::popup::refresh_popup_thread;
+use crate::state::popup::{dimensions::Dimensions, popup_state::PopupState, Popup};
 
 impl Context {
     pub fn render_pinned_popups(&mut self, ui: &Ui) {
@@ -28,16 +23,11 @@ impl Context {
         self.process_pinned_popups_actions(ui_actions);
     }
 
-    pub fn pin_popup(
-        ui: &Ui,
-        popup_pinned: &mut bool,
-        popup_pos: &mut Option<[f32; 2]>,
-        ui_actions: &mut Vec<UiAction>,
-    ) {
+    pub fn pin_popup(ui: &Ui, popup_state: &mut PopupState, ui_actions: &mut Vec<UiAction>) {
         ui.close_current_popup();
         ui_actions.push(UiAction::Pin);
-        *popup_pinned = true;
-        *popup_pos = Some(ui.window_pos());
+        popup_state.pinned = true;
+        popup_state.pos = Some(ui.window_pos());
     }
 
     fn render_pinned_popup(
@@ -50,11 +40,11 @@ impl Context {
     ) {
         let title_text_size = ui.calc_text_size(&popup.data.title);
         let screen_height = ui.io().display_size[1];
-        let mut is_opened = popup.opened;
+        let mut is_opened = popup.state.opened;
         let title_image_width = Dimensions::medium().width;
         let additional_title_width = 30.0;
-        Window::new(format!("##idp{}", popup.id))
-            .position(popup.pos.unwrap_or([0.0, 0.0]), Condition::Appearing)
+        Window::new(format!("##idp{}", popup.state.id))
+            .position(popup.state.pos.unwrap_or([0.0, 0.0]), Condition::Appearing)
             .always_auto_resize(true)
             .save_settings(false)
             .opened(&mut is_opened)
@@ -80,7 +70,7 @@ impl Context {
                     bold_font,
                 );
             });
-        if !popup.opened {
+        if !popup.state.opened {
             ui_actions.push(UiAction::Delete(popup_vec_index));
         }
     }
@@ -98,7 +88,7 @@ impl Context {
                         if let Some(href) = &t.data.redirection_href {
                             self.cache.popup_data_map.swap_remove(&href.clone());
                         }
-                        refresh_popup_thread(t.id, t.data.title.clone(), t.pos);
+                        refresh_popup_thread(t.state.clone(), t.data.title.clone());
                         vec.remove(*i);
                     }
                 }

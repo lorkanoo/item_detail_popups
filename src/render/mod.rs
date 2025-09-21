@@ -1,13 +1,14 @@
-use crate::{addon::Addon, api::gw2_wiki::prepare_item_popup, context::Context};
+use crate::state::context::{read_context, write_context, Context};
+use crate::api::gw2_wiki::prepare_item_popup;
 use nexus::imgui::Ui;
 use std::thread;
+use crate::core::threads::lock_threads;
 
 mod hovered_popup;
 mod options;
 mod pinned_popup;
 pub mod popup_data;
 pub mod token_renderer;
-pub mod util;
 
 impl Context {
     pub fn render(&mut self, ui: &Ui) {
@@ -49,13 +50,13 @@ impl Context {
             ui.text_disabled("Press enter to search");
             if ui.is_key_released(nexus::imgui::Key::Enter) {
                 ui.close_current_popup();
-                Addon::lock_threads().push(thread::spawn(move || {
-                    Addon::write_context().ui.loading_progress = Some(1);
-                    let item_name = Addon::read_context().search_text.clone();
-                    Addon::write_context().search_text = "".to_string();
-                    Addon::write_context().ui.hovered_popup =
+                lock_threads().push(thread::spawn(move || {
+                    write_context().ui.loading_progress = Some(1);
+                    let item_name = read_context().search_text.clone();
+                    write_context().search_text = "".to_string();
+                    write_context().ui.hovered_popup =
                         Some(prepare_item_popup(item_name.as_str()));
-                    Addon::write_context().ui.loading_progress = None;
+                    write_context().ui.loading_progress = None;
                 }));
             }
         });

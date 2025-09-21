@@ -1,26 +1,16 @@
-use crate::addon::Addon;
-use crate::cache::Cache;
-use crate::cache::Cacheable;
-use crate::cache::CachingStatus;
-use crate::config::rendering_params::RenderingParams;
-use crate::context::font::Font;
-use crate::context::ui::popup::dimensions::Dimensions;
-use crate::context::ui::popup::style::Style;
-use crate::context::ui::popup::tag_params::TagParams;
-use crate::context::ui::popup::token::Token;
-use crate::context::Context;
-use crate::render::util::ui::{UiAction, HIGHLIGHT_COLOR};
+use crate::state::cache::cache::{Cache, StoreInCache};
+use crate::state::cache::caching_status::CachingStatus;
+use crate::configuration::popup::rendering_params::RenderingParams;
+use crate::state::context::Context;
+use crate::state::font::Font;
+use crate::state::popup::dimensions::Dimensions;
+use crate::state::popup::style::Style;
+use crate::state::popup::tag_params::TagParams;
+use crate::state::popup::token::Token;
 use nexus::imgui::{MouseButton, Ui};
-use util::ui::UiLink;
-
-use super::util;
-use super::util::ui::extended::UiExtended;
+use crate::core::utils::ui::{UiAction, UiExtended, UiLink, HIGHLIGHT_COLOR};
 
 impl Context {
-    pub fn get_rendering_params() -> RenderingParams {
-        Addon::read_config().rendering_params.clone()
-    }
-
     pub fn render_tokens(
         ui: &Ui,
         pinned: &mut bool,

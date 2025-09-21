@@ -44,6 +44,8 @@ Press a custom search keybind (default CTRL+SHIFT+F) and enter a search phrase t
     - Make sure english in-game language is used. Other languages are not supported.
     - In case of using an uncommon keyboard layout, try changing the layout in advanced settings.
     - Try increasing macro delay in advanced settings.
+2. Popup keybind triggers Guild Wars 2 action bound to the right shift.
+    - Addon has to use one of the shift keys to link an item to chat. You can change which one is used in the macro settings.
 
 ## Reporting issues
 In case of any further problems or feature requests, please raise them in one of following ways:
@@ -53,5 +55,4 @@ In case of any further problems or feature requests, please raise them in one of
 
 ## Credits
 - to https://raidcore.gg/, for developing Nexus,
-- to [Zerthox](https://github.com/zerthox), for nexus and mumble rust bindings,
-- creator of https://github.com/droundy/singularize, for creating a simple singularize library.
+- to [Zerthox](https://github.com/zerthox), for nexus and mumble rust bindings.

@@ -1,26 +1,27 @@
-use crate::addon::Addon;
-use crate::api::get_sync;
-use crate::cache::price::Price;
-use crate::cache::CachedData;
-use crate::cache::CachingStatus::Cached;
+use crate::core::http_client::get_sync;
+use crate::state::cache::cached_data::CachedData;
+use crate::state::cache::caching_status::CachingStatus::Cached;
+use crate::state::cache::price::Price;
 use chrono::Local;
 
 use log::{debug, error};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::thread;
+use crate::state::context::write_context;
+use crate::core::threads::lock_threads;
 
 const GW2_API_URL: &str = "https://api.guildwars2.com/v2";
 
 #[derive(Deserialize, Debug)]
-pub struct PriceData {
+pub struct PriceApiResponse {
     pub id: u32,
-    pub buys: PriceDetails,
-    pub sells: PriceDetails,
+    pub buys: PriceResponse,
+    pub sells: PriceResponse,
 }
 
 #[derive(Deserialize, Debug)]
-pub struct PriceDetails {
+pub struct PriceResponse {
     pub unit_price: u32,
 }
 
@@ -36,11 +37,11 @@ fn prices_path(ids: &[u32]) -> String {
 }
 
 pub fn fetch_prices_thread(prices_to_cache: HashMap<u32, CachedData<Price>>) {
-    Addon::lock_threads().push(thread::spawn(move || {
+    lock_threads().push(thread::spawn(move || {
         let item_ids: Vec<u32> = prices_to_cache.keys().copied().collect();
         debug!("[fetch_prices_thread] started for {} items", item_ids.len());
         match get_sync(prices_path(&item_ids)) {
-            Ok(response) => match response.into_json::<Vec<PriceData>>() {
+            Ok(response) => match response.into_json::<Vec<PriceApiResponse>>() {
                 Ok(prices) => {
                     for price_data in prices {
                         if prices_to_cache.contains_key(&price_data.id) {
@@ -52,7 +53,7 @@ pub fn fetch_prices_thread(prices_to_cache: HashMap<u32, CachedData<Price>>) {
                                 CachedData::new_with_value(Local::now(), new_price)
                                     .with_caching_status(Cached);
 
-                            Addon::write_context()
+                            write_context()
                                 .cache
                                 .prices
                                 .insert(price_data.id, new_cached_price);

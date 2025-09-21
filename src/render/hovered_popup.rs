@@ -1,16 +1,16 @@
 use nexus::imgui::Ui;
+use crate::configuration::config::read_config;
+use crate::core::utils::ui::{UiAction, UiExtended};
+use crate::state::context::Context;
 
-use crate::{addon::Addon, context::Context};
-
-use super::util::ui::{extended::UiExtended, UiAction};
 
 impl Context {
     pub fn render_hovered_popup(&mut self, ui: &Ui) {
         let mut ui_actions: Vec<UiAction> = vec![];
         if let Some(popup) = self.ui.hovered_popup.as_mut() {
-            if !popup.opened {
+            if !popup.state.opened {
                 ui.open_popup("##popup_idp");
-                popup.opened = true;
+                popup.state.opened = true;
             }
             ui.popup("##popup_idp", || {
                 ui.group(|| {
@@ -23,11 +23,11 @@ impl Context {
                         &self.bold_font,
                     );
                 });
-                if Addon::read_config().close_on_mouse_away {
+                if read_config().close_on_mouse_away {
                     Self::close_popup_on_mouse_away(ui, &mut ui_actions);
                 }
-                if ui.is_item_clicked() && !popup.pinned {
-                    Self::pin_popup(ui, &mut popup.pinned, &mut popup.pos, &mut ui_actions);
+                if ui.is_item_clicked() && !popup.state.pinned {
+                    Self::pin_popup(ui, &mut popup.state, &mut ui_actions);
                 }
             });
         }

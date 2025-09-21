@@ -1,11 +1,12 @@
-use crate::addon::Addon;
 use crate::api::gw2_api::fetch_prices_thread;
-use crate::cache::{CachedData, CachingStatus};
 use chrono::Local;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use crate::configuration::config::read_config;
+use crate::state::cache::cache::{is_cache_expired, StoreInCache};
+use crate::state::cache::cached_data::CachedData;
+use crate::state::cache::caching_status::CachingStatus;
 
-use super::{is_cache_expired, Cacheable};
 #[derive(Clone, Serialize, Deserialize, Default)]
 pub struct Price {
     pub highest_buy: u32,
@@ -14,7 +15,7 @@ pub struct Price {
 
 pub type PriceCache = HashMap<u32, CachedData<Price>>;
 
-impl<'a> Cacheable<'a, PriceCache, PriceCache, Vec<u32>> for PriceCache {
+impl<'a> StoreInCache<'a, PriceCache, PriceCache, Vec<u32>> for PriceCache {
     fn retrieve(&'a mut self, key: Vec<u32>) -> Option<PriceCache> {
         let mut prices_to_cache = HashMap::new();
         let mut result = HashMap::new();
@@ -23,7 +24,7 @@ impl<'a> Cacheable<'a, PriceCache, PriceCache, Vec<u32>> for PriceCache {
                 Some(price) => {
                     result.insert(item_id, price.clone());
                     if is_cache_expired(
-                        Addon::read_config().max_price_expiration_duration,
+                        read_config().max_price_expiration_duration,
                         price.date,
                     ) && !matches!(&price.caching_status, CachingStatus::InProgress)
                     {

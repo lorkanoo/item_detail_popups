@@ -1,5 +1,5 @@
-use super::yes;
 use serde::{Deserialize, Serialize};
+use crate::core::utils::serde::yes;
 
 const DEFAULT_MAX_CONTENT_WIDTH: f32 = 700.0;
 const DEFAULT_CONTENT_MARGIN_RIGHT: f32 = 20.0;
@@ -8,42 +8,61 @@ const DEFAULT_CONTENT_MARGIN_RIGHT: f32 = 20.0;
 pub struct RenderingParams {
     #[serde(default = "default_link_color")]
     pub link_color: [f32; 4],
+
     #[serde(default = "default_gold_coin_color")]
     pub gold_coin_color: [f32; 4],
+
     #[serde(default = "default_silver_coin_color")]
     pub silver_coin_color: [f32; 4],
+
     #[serde(default = "default_copper_coin_color")]
     pub copper_coin_color: [f32; 4],
+
     #[serde(default = "yes")]
     pub use_bullet_list_punctuation: bool,
+
     #[serde(default = "yes")]
     pub show_general_tab: bool,
+
     #[serde(default = "yes")]
     pub show_acquisition_tab: bool,
+
     #[serde(default = "yes")]
     pub show_teaches_recipe_tab: bool,
+
     #[serde(default = "yes")]
     pub show_getting_there_tab: bool,
+
     #[serde(default = "yes")]
     pub show_walkthrough_tab: bool,
+
     #[serde(default = "yes")]
     pub show_location_tab: bool,
+
     #[serde(default = "yes")]
     pub show_rewards_tab: bool,
+
     #[serde(default = "yes")]
     pub show_related_achievements_tab: bool,
+
     #[serde(default = "yes")]
     pub show_contents_tab: bool,
+
     #[serde(default = "yes")]
     pub show_notes_tab: bool,
+
     #[serde(default = "yes")]
     pub show_images_tab: bool,
+
     #[serde(default = "yes")]
     pub show_tag_bar: bool,
+
     #[serde(default = "yes")]
     pub auto_pin_on_tab_hover: bool,
+
     #[serde(default = "default_max_content_width")]
     pub max_content_width: f32,
+
     #[serde(default = "default_content_margin_right")]
     pub content_margin_right: f32,
 }

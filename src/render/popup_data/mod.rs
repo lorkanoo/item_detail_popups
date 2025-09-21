@@ -1,23 +1,21 @@
-use crate::addon::Addon;
 use crate::api::gw2_wiki::href_to_wiki_url;
-use crate::cache::Cache;
-use crate::cache::Cacheable;
-use crate::cache::CachingStatus;
-use crate::config::rendering_params::RenderingParams;
-use crate::context::font::Font;
-use crate::context::ui::popup::token::Token;
-use crate::context::ui::popup::Popup;
-use crate::context::Context;
-use crate::render::util::ui::UiAction;
+use crate::state::cache::cache::{Cache, StoreInCache};
+use crate::state::cache::caching_status::CachingStatus;
+use crate::configuration::popup::rendering_params::RenderingParams;
+use crate::state::context::Context;
+use crate::state::font::Font;
+use crate::state::popup::popup_state::PopupState;
+use crate::state::popup::token::Token;
+use crate::state::popup::Popup;
 use nexus::imgui::sys;
 use nexus::imgui::MenuItem;
 use nexus::imgui::{ChildWindow, MouseButton, Ui};
 use std::ptr;
 use std::thread;
-use util::ui::UiLink;
-
-use super::util;
-use super::util::ui::extended::UiExtended;
+use crate::configuration::config::read_config;
+use crate::state::context::write_context;
+use crate::core::threads::lock_threads;
+use crate::core::utils::ui::{UiAction, UiExtended, UiLink};
 
 pub mod price;
 
@@ -32,9 +30,9 @@ impl Context {
         cache: &mut Cache,
         bold_font: &Option<Font>,
     ) {
-        let rendering_params = Self::get_rendering_params();
+        let rendering_params = read_config().rendering_params.clone();
         Self::render_title_bar(ui, popup, cache, bold_font);
-        if !popup.collapsed {
+        if !popup.state.collapsed {
             Self::render_content(
                 ui,
                 pinned_popup_vec_index,
@@ -44,20 +42,15 @@ impl Context {
                 bold_font,
                 &rendering_params,
             );
-            let window_width = ui.window_size()[0];
-            let is_resizing = window_width != popup.width.unwrap_or(window_width);
-            if pinned_popup_vec_index.is_some()
-                && !is_resizing
-                && ui.close_button(
-                    format!("##idp_close{}", popup.id),
-                    &rendering_params.max_content_width,
-                )
-            {
-                popup.opened = false
-            }
+            render_close_button(
+                ui,
+                pinned_popup_vec_index,
+                &mut popup.state,
+                rendering_params,
+            );
         }
         let window_width = ui.window_size()[0];
-        popup.width = Some(window_width);
+        popup.state.width = Some(window_width);
     }
 
     fn render_title_bar(ui: &Ui, popup: &mut Popup, cache: &mut Cache, bold_font: &Option<Font>) {
@@ -69,31 +62,39 @@ impl Context {
         if let Some(bold_font) = bold_font {
             let _token = bold_font.push();
             if let Some(dimensions) = dimensions {
-                ui.text_vert_centered(&popup.data.title, &dimensions.height, &popup.collapsed);
+                ui.text_vert_centered(
+                    &popup.data.title,
+                    &dimensions.height,
+                    &popup.state.collapsed,
+                );
             } else {
-                ui.text_or_disabled(&popup.data.title, &popup.collapsed);
+                ui.text_or_disabled(&popup.data.title, &popup.state.collapsed);
                 ui.spacing();
             }
         } else if let Some(dimensions) = dimensions {
-            ui.text_vert_centered(&popup.data.title, &dimensions.height, &popup.collapsed);
+            ui.text_vert_centered(
+                &popup.data.title,
+                &dimensions.height,
+                &popup.state.collapsed,
+            );
         } else {
-            ui.text_or_disabled(&popup.data.title, &popup.collapsed);
+            ui.text_or_disabled(&popup.data.title, &popup.state.collapsed);
             ui.spacing();
         }
 
         if ui.is_item_hovered() {
             if ui.is_mouse_dragging(MouseButton::Left) {
-                popup.title_dragging = true;
+                popup.state.title_dragging = true;
             }
             if ui.is_mouse_released(MouseButton::Left) {
-                if popup.title_dragging {
-                    popup.title_dragging = false;
+                if popup.state.title_dragging {
+                    popup.state.title_dragging = false;
                 } else {
-                    popup.collapsed = !popup.collapsed;
+                    popup.state.collapsed = !popup.state.collapsed;
                 }
             }
         } else {
-            popup.title_dragging = false;
+            popup.state.title_dragging = false;
         }
     }
 
@@ -110,7 +111,7 @@ impl Context {
             Self::render_tag_bar(ui, popup, ui_actions, rendering_params);
         }
         if popup.data.is_not_empty() {
-            if let Some(_token) = ui.tab_bar(format!("tabs##rps{}", popup.id)) {
+            if let Some(_token) = ui.tab_bar(format!("tabs##rps{}", popup.state.id)) {
                 Self::render_tab(
                     "General",
                     ui,
@@ -118,13 +119,11 @@ impl Context {
                     ui_actions,
                     cache,
                     bold_font,
-                    popup.id,
                     &popup.data.item_ids,
                     &popup.data.description,
                     rendering_params.show_general_tab,
+                    &mut popup.state,
                     rendering_params,
-                    &mut popup.pinned,
-                    &mut popup.pos,
                     true,
                 );
                 Self::render_tab(
@@ -134,13 +133,11 @@ impl Context {
                     ui_actions,
                     cache,
                     bold_font,
-                    popup.id,
                     &None,
                     &popup.data.acquisition,
                     rendering_params.show_acquisition_tab,
+                    &mut popup.state,
                     rendering_params,
-                    &mut popup.pinned,
-                    &mut popup.pos,
                     false,
                 );
                 Self::render_tab(
@@ -150,13 +147,11 @@ impl Context {
                     ui_actions,
                     cache,
                     bold_font,
-                    popup.id,
                     &None,
                     &popup.data.teaches_recipe,
                     rendering_params.show_teaches_recipe_tab,
+                    &mut popup.state,
                     rendering_params,
-                    &mut popup.pinned,
-                    &mut popup.pos,
                     false,
                 );
                 Self::render_tab(
@@ -166,13 +161,11 @@ impl Context {
                     ui_actions,
                     cache,
                     bold_font,
-                    popup.id,
                     &None,
                     &popup.data.getting_there,
                     rendering_params.show_getting_there_tab,
+                    &mut popup.state,
                     rendering_params,
-                    &mut popup.pinned,
-                    &mut popup.pos,
                     false,
                 );
                 Self::render_tab(
@@ -182,13 +175,11 @@ impl Context {
                     ui_actions,
                     cache,
                     bold_font,
-                    popup.id,
                     &None,
                     &popup.data.location,
                     rendering_params.show_location_tab,
+                    &mut popup.state,
                     rendering_params,
-                    &mut popup.pinned,
-                    &mut popup.pos,
                     false,
                 );
                 Self::render_tab(
@@ -198,13 +189,11 @@ impl Context {
                     ui_actions,
                     cache,
                     bold_font,
-                    popup.id,
                     &None,
                     &popup.data.walkthrough,
                     rendering_params.show_walkthrough_tab,
+                    &mut popup.state,
                     rendering_params,
-                    &mut popup.pinned,
-                    &mut popup.pos,
                     false,
                 );
                 Self::render_tab(
@@ -214,13 +203,11 @@ impl Context {
                     ui_actions,
                     cache,
                     bold_font,
-                    popup.id,
                     &None,
                     &popup.data.rewards,
                     rendering_params.show_rewards_tab,
+                    &mut popup.state,
                     rendering_params,
-                    &mut popup.pinned,
-                    &mut popup.pos,
                     false,
                 );
                 Self::render_tab(
@@ -230,13 +217,11 @@ impl Context {
                     ui_actions,
                     cache,
                     bold_font,
-                    popup.id,
                     &None,
                     &popup.data.related_achievements,
                     rendering_params.show_related_achievements_tab,
+                    &mut popup.state,
                     rendering_params,
-                    &mut popup.pinned,
-                    &mut popup.pos,
                     false,
                 );
                 Self::render_tab(
@@ -246,13 +231,11 @@ impl Context {
                     ui_actions,
                     cache,
                     bold_font,
-                    popup.id,
                     &None,
                     &popup.data.contents,
                     rendering_params.show_contents_tab,
+                    &mut popup.state,
                     rendering_params,
-                    &mut popup.pinned,
-                    &mut popup.pos,
                     false,
                 );
                 Self::render_tab(
@@ -262,13 +245,11 @@ impl Context {
                     ui_actions,
                     cache,
                     bold_font,
-                    popup.id,
                     &None,
                     &popup.data.notes,
                     rendering_params.show_notes_tab,
+                    &mut popup.state,
                     rendering_params,
-                    &mut popup.pinned,
-                    &mut popup.pos,
                     false,
                 );
                 Self::render_images_tab(
@@ -291,28 +272,26 @@ impl Context {
         ui_actions: &mut Vec<UiAction>,
         cache: &mut Cache,
         bold_font: &Option<Font>,
-        popup_id: u64,
         item_ids: &Option<Vec<u32>>,
         tokens: &Vec<Token>,
         should_render: bool,
+        popup_state: &mut PopupState,
         rendering_params: &RenderingParams,
-        popup_pinned: &mut bool,
-        popup_pos: &mut Option<[f32; 2]>,
         general_tab: bool,
     ) {
         if should_render && (!tokens.is_empty() || (general_tab && item_ids.is_some())) {
-            let token = ui.tab_item(format!("{tab_name}##idp{popup_id}"));
+            let token = ui.tab_item(format!("{tab_name}##idp{}", popup_state.id));
             if ui.is_item_hovered()
                 && pinned_popup_vec_index.is_none()
                 && rendering_params.auto_pin_on_tab_hover
             {
-                Self::pin_popup(ui, popup_pinned, popup_pos, ui_actions);
+                Self::pin_popup(ui, popup_state, ui_actions);
             }
             if token.is_some() {
                 let mut render_func = || {
                     Self::render_tokens(
                         ui,
-                        popup_pinned,
+                        &mut popup_state.pinned,
                         tokens,
                         ui_actions,
                         cache,
@@ -333,7 +312,7 @@ impl Context {
                             screen_height * 0.15,
                         ],
                     );
-                    ChildWindow::new(format!("{tab_name}_scroll##idp{popup_id}").as_str())
+                    ChildWindow::new(format!("{tab_name}_scroll##idp{}", popup_state.id).as_str())
                         .border(true)
                         .scroll_bar(true)
                         .build(ui, render_func);
@@ -361,12 +340,12 @@ impl Context {
         if !rendering_params.show_images_tab || popup.data.images.is_empty() {
             return;
         }
-        let token = ui.tab_item(format!("Images##idp{}", popup.id));
+        let token = ui.tab_item(format!("Images##idp{}", popup.state.id));
         if ui.is_item_hovered()
             && pinned_popup_vec_index.is_none()
             && rendering_params.auto_pin_on_tab_hover
         {
-            Self::pin_popup(ui, &mut popup.pinned, &mut popup.pos, ui_actions);
+            Self::pin_popup(ui, &mut popup.state, ui_actions);
         }
         if token.is_some() {
             let mut render_func = || {
@@ -435,7 +414,7 @@ impl Context {
                 [100.0, screen_height * 0.05],
                 [400.0, screen_height * 0.30],
             );
-            ChildWindow::new(format!("notes_scroll##rps{}", popup.id).as_str())
+            ChildWindow::new(format!("notes_scroll##rps{}", popup.state.id).as_str())
                 .border(true)
                 .scroll_bar(true)
                 .build(ui, render_func);
@@ -462,7 +441,7 @@ impl Context {
         if let Some(index) = pinned_popup_vec_index {
             ui.spacing();
 
-            if ui.button(format!("Open wiki##idp{}", popup.id)) {
+            if ui.button(format!("Open wiki##idp{}", popup.state.id)) {
                 let href = popup
                     .data
                     .redirection_href
@@ -475,12 +454,12 @@ impl Context {
 
             ui.same_line();
 
-            if ui.button(format!("More..##idp{}", popup.id)) {
-                ui.open_popup(format!("##Popup_idp{}", popup.id));
+            if ui.button(format!("More..##idp{}", popup.state.id)) {
+                ui.open_popup(format!("##Popup_idp{}", popup.state.id));
             }
-            ui.popup(format!("##Popup_idp{}", popup.id), || {
-                if MenuItem::new(format!("Refresh##idp{}", popup.id)).build(ui) {
-                    popup.pos = Some(ui.window_pos());
+            ui.popup(format!("##Popup_idp{}", popup.state.id), || {
+                if MenuItem::new(format!("Refresh##idp{}", popup.state.id)).build(ui) {
+                    popup.state.pos = Some(ui.window_pos());
                     ui_actions.push(UiAction::Refresh(index));
                 }
                 if ui.is_item_hovered() {
@@ -489,10 +468,10 @@ impl Context {
                         ui.text(format!("Last refreshed on {}", formatted_date));
                     });
                 }
-                if MenuItem::new(format!("Copy name##idp{}", popup.id)).build(ui) {
+                if MenuItem::new(format!("Copy name##idp{}", popup.state.id)).build(ui) {
                     let name = popup.data.title.clone();
-                    Addon::lock_threads().push(thread::spawn(move || {
-                        let _ = Addon::write_context().clipboard.set_text(name.as_str());
+                    lock_threads().push(thread::spawn(move || {
+                        let _ = write_context().clipboard.set_text(name.as_str());
                     }));
                 }
             });
@@ -515,11 +494,11 @@ impl Context {
                 {
                     ui.new_line();
                 }
-                ui.text_colored(
-                    Addon::read_config().rendering_params.link_color,
-                    format!("[{}]", tag.1),
-                );
-                if ui.is_item_hovered() && ui.is_mouse_released(MouseButton::Left) && popup.pinned {
+                ui.text_colored(rendering_params.link_color, format!("[{}]", tag.1));
+                if ui.is_item_hovered()
+                    && ui.is_mouse_released(MouseButton::Left)
+                    && popup.state.pinned
+                {
                     ui_actions.push(UiAction::Open(UiLink {
                         href: tag.0.clone(),
                         title: tag.1.clone(),
@@ -529,5 +508,24 @@ impl Context {
             }
             ui.new_line();
         }
+    }
+}
+
+fn render_close_button(
+    ui: &Ui<'_>,
+    pinned_popup_vec_index: Option<usize>,
+    popup_state: &mut PopupState,
+    rendering_params: RenderingParams,
+) {
+    let window_width = ui.window_size()[0];
+    let is_resizing = window_width != popup_state.width.unwrap_or(window_width);
+    if pinned_popup_vec_index.is_some()
+        && !is_resizing
+        && ui.close_button(
+            format!("##idp_close{}", popup_state.id),
+            &rendering_params.max_content_width,
+        )
+    {
+        popup_state.opened = false
     }
 }

@@ -7,6 +7,7 @@ use strum_macros::EnumIter;
 pub enum KeyboardLayout {
     QWERTY,
     AZERTY,
+    DVORAK,
 }
 
 impl Default for KeyboardLayout {
@@ -20,6 +21,7 @@ impl Display for KeyboardLayout {
         match self {
             KeyboardLayout::QWERTY => write!(f, "QWERTY"),
             KeyboardLayout::AZERTY => write!(f, "AZERTY"),
+            KeyboardLayout::DVORAK => write!(f, "DVORAK"),
         }
     }
 }

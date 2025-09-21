@@ -6,10 +6,27 @@ use nexus::imgui::{
     Ui,
 };
 
-use crate::context::font::Font;
+use crate::state::font::Font;
 
 pub const CLOSE_BUTTON_SIZE: f32 = 25.0;
 pub const CLOSE_BUTTON_MARGIN_OUTER_X: f32 = 15.0;
+
+pub const HIGHLIGHT_COLOR: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
+
+#[derive(Clone, Debug)]
+pub enum UiAction {
+    Delete(usize),
+    Refresh(usize),
+    Close,
+    Pin,
+    Open(UiLink),
+}
+
+#[derive(Clone, Debug)]
+pub struct UiLink {
+    pub title: String,
+    pub href: String,
+}
 
 #[allow(dead_code)]
 pub trait UiExtended {

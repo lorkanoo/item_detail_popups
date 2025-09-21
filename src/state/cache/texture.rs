@@ -1,28 +1,32 @@
-use super::is_cache_expired;
-use super::Cacheable;
-use crate::addon::Addon;
+use crate::state::cache::cache::is_cache_expired;
+use crate::state::cache::cache::StoreInCache;
 use crate::api::gw2_wiki::download_wiki_image;
-use crate::cache::{CachedData, CachingStatus};
-use crate::config::textures_dir;
+use crate::configuration::config::textures_dir;
 use chrono::Local;
 use log::{debug, error};
 use nexus::texture::{load_texture_from_file, RawTextureReceiveCallback, Texture};
 use nexus::texture_receive;
 use std::collections::HashMap;
 use std::thread;
+use crate::state::cache::cached_data::CachedData;
+use crate::state::cache::caching_status::CachingStatus;
+use crate::configuration::config::read_config;
+use crate::state::context::write_context;
+use crate::core::threads::lock_threads;
 
 pub const RECEIVE_TEXTURE: RawTextureReceiveCallback = texture_receive!(receive_texture);
 pub const TEXTURE_PREFIX: &str = "ITEM_DETAIL_POPUPS_URL_";
+
 pub type TextureCache = HashMap<String, CachedData<Texture>>;
 
-impl<'a> Cacheable<'a, TextureCache, CachedData<Texture>, String> for TextureCache {
+impl<'a> StoreInCache<'a, TextureCache, CachedData<Texture>, String> for TextureCache {
     fn retrieve(&'a mut self, texture_id: String) -> Option<CachedData<Texture>> {
         let texture_id_with_prefix = format!("{}{}", TEXTURE_PREFIX, texture_id);
         let mut should_start_caching = false;
         let result = match self.get(&texture_id_with_prefix) {
             Some(texture_cached_data) => {
                 let cache_expiration_duration =
-                    Addon::read_config().max_texture_expiration_duration;
+                    read_config().max_texture_expiration_duration;
                 let mut result = texture_cached_data.clone();
                 if is_cache_expired(cache_expiration_duration, texture_cached_data.date)
                     && !matches!(
@@ -53,7 +57,7 @@ impl<'a> Cacheable<'a, TextureCache, CachedData<Texture>, String> for TextureCac
 }
 
 pub fn fetch_texture_thread(texture_id: String) {
-    Addon::lock_threads().push(thread::spawn(move || {
+    lock_threads().push(thread::spawn(move || {
         debug!("[fetch_texture_thread] started for {}", texture_id);
         let mut path = textures_dir();
         path.push(identifier_to_filename(&texture_id));
@@ -80,7 +84,7 @@ pub fn receive_texture(id: &str, texture: Option<&Texture>) {
     if texture.is_none() {
         return;
     }
-    Addon::write_context().cache.textures.insert(
+    write_context().cache.textures.insert(
         id.to_string(),
         CachedData::new_with_value(Local::now(), texture.unwrap().clone())
             .with_caching_status(CachingStatus::Cached),
