@@ -1,11 +1,11 @@
-use crate::state::font::Font;
-use nexus::imgui::{Condition, Ui, Window};
 use crate::core::utils::ui::{UiAction, CLOSE_BUTTON_MARGIN_OUTER_X, CLOSE_BUTTON_SIZE};
 use crate::state::cache::cache::Cache;
 use crate::state::context::Context;
+use crate::state::font::Font;
+use crate::state::popup::{dimensions::Dimensions, popup_state::PopupState, Popup};
 use crate::state::threads::link::open_link_thread;
 use crate::state::threads::popup::refresh_popup_thread;
-use crate::state::popup::{dimensions::Dimensions, popup_state::PopupState, Popup};
+use nexus::imgui::{Condition, Ui, Window};
 
 impl Context {
     pub fn render_pinned_popups(&mut self, ui: &Ui) {
@@ -58,7 +58,7 @@ impl Context {
                         + additional_title_width),
                     title_text_size[1],
                 ],
-                [f32::MAX, screen_height * 0.5],
+                [f32::MAX, screen_height],
             )
             .build(ui, || {
                 Self::render_popup_data(

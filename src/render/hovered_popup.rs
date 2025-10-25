@@ -1,11 +1,12 @@
-use nexus::imgui::Ui;
 use crate::configuration::config::read_config;
 use crate::core::utils::ui::{UiAction, UiExtended};
 use crate::state::context::Context;
-
+use log::debug;
+use nexus::imgui::Ui;
 
 impl Context {
     pub fn render_hovered_popup(&mut self, ui: &Ui) {
+        debug!("[render_hovered_popup]");
         let mut ui_actions: Vec<UiAction> = vec![];
         if let Some(popup) = self.ui.hovered_popup.as_mut() {
             if !popup.state.opened {

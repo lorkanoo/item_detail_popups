@@ -1,6 +1,6 @@
+use crate::configuration::popup::rendering_params::RenderingParams;
 use crate::state::cache::cache::Cache;
 use crate::state::cache::cache::StoreInCache;
-use crate::configuration::popup::rendering_params::RenderingParams;
 use crate::state::context::Context;
 use nexus::imgui::Ui;
 
@@ -12,31 +12,24 @@ impl Context {
     pub fn render_price(
         ui: &Ui,
         price: u32,
-        x_render_start_pos: Option<f32>,
         cache: &mut Cache,
         rendering_params: &RenderingParams,
     ) {
-        if let Some(pos) = x_render_start_pos {
-            ui.set_cursor_screen_pos([pos, ui.cursor_screen_pos()[1]]);
-        }
-        ui.text_colored(
-            rendering_params.gold_coin_color,
-            format!("{:02}", Self::gold_price_part(price)),
-        );
+        let gold_price = format!("{:02}", Self::gold_price_part(price));
+        ui.text_colored(rendering_params.gold_coin_color, gold_price);
+
         ui.same_line();
         Self::render_image(ui, GOLD_COIN_HREF, &None, cache);
         ui.same_line();
-        ui.text_colored(
-            rendering_params.silver_coin_color,
-            format!("{:02}", Self::silver_price_part(price)),
-        );
+        let silver_price = format!("{:02}", Self::silver_price_part(price));
+        ui.text_colored(rendering_params.silver_coin_color, silver_price);
+
         ui.same_line();
         Self::render_image(ui, SILVER_COIN_HREF, &None, cache);
         ui.same_line();
-        ui.text_colored(
-            rendering_params.copper_coin_color,
-            format!("{:02}", Self::copper_price_part(price)),
-        );
+        let copper_price = format!("{:02}", Self::copper_price_part(price));
+        ui.text_colored(rendering_params.copper_coin_color, copper_price);
+
         ui.same_line();
         Self::render_image(ui, COPPER_COIN_HREF, &None, cache);
     }
@@ -46,56 +39,69 @@ impl Context {
         item_ids: &Option<Vec<u32>>,
         cache: &mut Cache,
         rendering_params: &RenderingParams,
+        item_quantity: usize,
     ) {
-        if let Some(item_ids) = &item_ids {
-            let prices_opt = cache.prices.retrieve(item_ids.clone());
+        let Some(item_ids) = item_ids else { return };
 
-            if prices_opt.is_none() {
-                return;
-            }
+        let Some(prices) = cache.prices.retrieve(item_ids.clone()) else {
+            return;
+        };
 
-            let prices = prices_opt.unwrap();
-
-            let mut highest_sell_price = None;
-            for (item_id, price_data) in &prices {
-                if let Some(price) = price_data.value() {
-                    match highest_sell_price {
-                        None => highest_sell_price = Some((*item_id, price.lowest_sell)),
-                        Some((_, current_max)) if price.lowest_sell > current_max => {
-                            highest_sell_price = Some((*item_id, price.lowest_sell))
-                        }
-                        _ => {}
+        let mut highest_sell_price = None;
+        for (item_id, price_data) in &prices {
+            if let Some(price) = price_data.value() {
+                match highest_sell_price {
+                    None => highest_sell_price = Some((*item_id, price.lowest_sell)),
+                    Some((_, current_max)) if price.lowest_sell > current_max => {
+                        highest_sell_price = Some((*item_id, price.lowest_sell))
                     }
+                    _ => {}
                 }
             }
-            if let Some((item_id, _)) = highest_sell_price {
-                if let Some(price_data) = prices.get(&item_id) {
-                    if let Some(price) = price_data.value() {
-                        ui.text("Sell ");
-                        ui.same_line();
-                        let sell_text_pos = ui.cursor_screen_pos()[0];
-                        Self::render_price(ui, price.lowest_sell, None, cache, rendering_params);
+        }
 
-                        ui.text("Buy ");
-                        ui.same_line();
-                        Self::render_price(
-                            ui,
-                            price.highest_buy,
-                            Some(sell_text_pos),
-                            cache,
-                            rendering_params,
-                        );
-                        if item_ids.len() > 1 {
-                            ui.text_disabled("Showing the highest price for item with this name.");
-                        }
-                    }
-                }
-            } else {
-                ui.text("Sell ");
-                ui.text("Buy ");
-                if item_ids.len() > 1 {
-                    ui.text_disabled("Showing the price of the highest rarity.");
-                }
+        if let Some(price) = highest_sell_price
+            .and_then(|(item_id, _)| prices.get(&item_id))
+            .and_then(|cached_price| cached_price.value())
+        {
+            ui.text_disabled(" | ");
+            ui.same_line();
+            ui.text("Sell ");
+            ui.same_line();
+            ui.group(|| {
+                Self::render_price(ui, price.lowest_sell, cache, rendering_params);
+            });
+            if ui.is_item_hovered() && item_quantity > 1 {
+                ui.tooltip(|| {
+                    ui.text_disabled(format!(" Sell {item_quantity} for: "));
+                    ui.same_line();
+                    Self::render_price(
+                        ui,
+                        price.lowest_sell * item_quantity as u32,
+                        cache,
+                        rendering_params,
+                    );
+                });
+            }
+            ui.same_line();
+            ui.text_disabled(" | ");
+            ui.same_line();
+            ui.text("Buy ");
+            ui.same_line();
+            ui.group(|| {
+                Self::render_price(ui, price.highest_buy, cache, rendering_params);
+            });
+            if ui.is_item_hovered() && item_quantity > 1 {
+                ui.tooltip(|| {
+                    ui.text_disabled(format!(" Buy {item_quantity} for: "));
+                    ui.same_line();
+                    Self::render_price(
+                        ui,
+                        price.highest_buy * item_quantity as u32,
+                        cache,
+                        rendering_params,
+                    );
+                });
             }
         }
     }

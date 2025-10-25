@@ -1,8 +1,8 @@
+use crate::core::utils::serde::{no, yes};
 use serde::{Deserialize, Serialize};
-use crate::core::utils::serde::yes;
 
-const DEFAULT_MAX_CONTENT_WIDTH: f32 = 700.0;
-const DEFAULT_CONTENT_MARGIN_RIGHT: f32 = 20.0;
+const DEFAULT_MAX_CONTENT_WIDTH: f32 = 800.0;
+const DEFAULT_MAX_CONTENT_HEIGHT: f32 = 350.0;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RenderingParams {
@@ -25,34 +25,10 @@ pub struct RenderingParams {
     pub show_general_tab: bool,
 
     #[serde(default = "yes")]
-    pub show_acquisition_tab: bool,
-
-    #[serde(default = "yes")]
-    pub show_teaches_recipe_tab: bool,
-
-    #[serde(default = "yes")]
-    pub show_getting_there_tab: bool,
-
-    #[serde(default = "yes")]
-    pub show_walkthrough_tab: bool,
-
-    #[serde(default = "yes")]
-    pub show_location_tab: bool,
-
-    #[serde(default = "yes")]
-    pub show_rewards_tab: bool,
-
-    #[serde(default = "yes")]
-    pub show_related_achievements_tab: bool,
-
-    #[serde(default = "yes")]
-    pub show_contents_tab: bool,
-
-    #[serde(default = "yes")]
-    pub show_notes_tab: bool,
-
-    #[serde(default = "yes")]
     pub show_images_tab: bool,
+
+    #[serde(default = "default_blacklisted_tabs")]
+    pub blacklisted_tabs: Vec<String>,
 
     #[serde(default = "yes")]
     pub show_tag_bar: bool,
@@ -60,11 +36,14 @@ pub struct RenderingParams {
     #[serde(default = "yes")]
     pub auto_pin_on_tab_hover: bool,
 
+    #[serde(default = "no")]
+    pub allow_popup_collapsing: bool,
+
     #[serde(default = "default_max_content_width")]
     pub max_content_width: f32,
 
-    #[serde(default = "default_content_margin_right")]
-    pub content_margin_right: f32,
+    #[serde(default = "default_max_content_height")]
+    pub max_content_height: f32,
 }
 
 impl Default for RenderingParams {
@@ -76,22 +55,29 @@ impl Default for RenderingParams {
             copper_coin_color: default_copper_coin_color(),
             use_bullet_list_punctuation: yes(),
             show_general_tab: yes(),
-            show_acquisition_tab: yes(),
-            show_teaches_recipe_tab: yes(),
-            show_getting_there_tab: yes(),
-            show_contents_tab: yes(),
-            show_notes_tab: yes(),
-            show_location_tab: yes(),
-            show_walkthrough_tab: yes(),
-            show_rewards_tab: yes(),
-            show_related_achievements_tab: yes(),
+            blacklisted_tabs: default_blacklisted_tabs(),
             show_images_tab: yes(),
             show_tag_bar: yes(),
             auto_pin_on_tab_hover: yes(),
+            allow_popup_collapsing: no(),
             max_content_width: default_max_content_width(),
-            content_margin_right: default_content_margin_right(),
+            max_content_height: default_max_content_height(),
         }
     }
+}
+
+fn default_blacklisted_tabs() -> Vec<String> {
+    vec![
+        "external links".to_string(),
+        "references".to_string(),
+        "trivia".to_string(),
+        "dialogue".to_string(),
+        "quotes".to_string(),
+        "version history".to_string(),
+        "gallery".to_string(),
+        "gem store history".to_string(),
+        "text".to_string(),
+    ]
 }
 
 fn default_link_color() -> [f32; 4] {
@@ -113,6 +99,7 @@ fn default_copper_coin_color() -> [f32; 4] {
 pub fn default_max_content_width() -> f32 {
     DEFAULT_MAX_CONTENT_WIDTH
 }
-pub fn default_content_margin_right() -> f32 {
-    DEFAULT_CONTENT_MARGIN_RIGHT
+
+pub fn default_max_content_height() -> f32 {
+    DEFAULT_MAX_CONTENT_HEIGHT
 }

@@ -1,21 +1,22 @@
-use crate::api::gw2_wiki::href_to_wiki_url;
+use crate::api::gw2_wiki::{href_to_wiki_url, process_text};
+use crate::configuration::config::read_config;
+use crate::configuration::popup::rendering_params::RenderingParams;
+use crate::core::threads::lock_threads;
+use crate::core::utils::ui::{UiAction, UiExtended, UiLink};
 use crate::state::cache::cache::{Cache, StoreInCache};
 use crate::state::cache::caching_status::CachingStatus;
-use crate::configuration::popup::rendering_params::RenderingParams;
+use crate::state::context::write_context;
 use crate::state::context::Context;
 use crate::state::font::Font;
 use crate::state::popup::popup_state::PopupState;
 use crate::state::popup::token::Token;
 use crate::state::popup::Popup;
-use nexus::imgui::sys;
+use log::{debug, error};
 use nexus::imgui::MenuItem;
+use nexus::imgui::{sys, TabBarFlags};
 use nexus::imgui::{ChildWindow, MouseButton, Ui};
-use std::ptr;
 use std::thread;
-use crate::configuration::config::read_config;
-use crate::state::context::write_context;
-use crate::core::threads::lock_threads;
-use crate::core::utils::ui::{UiAction, UiExtended, UiLink};
+use std::{f32, ptr};
 
 pub mod price;
 
@@ -30,10 +31,11 @@ impl Context {
         cache: &mut Cache,
         bold_font: &Option<Font>,
     ) {
+        debug!("[render_popup_data]");
         let rendering_params = read_config().rendering_params.clone();
-        Self::render_title_bar(ui, popup, cache, bold_font);
+        Self::render_title_bar(ui, popup, cache, bold_font, &rendering_params);
         if !popup.state.collapsed {
-            Self::render_content(
+            Self::render_popup_content(
                 ui,
                 pinned_popup_vec_index,
                 popup,
@@ -42,44 +44,61 @@ impl Context {
                 bold_font,
                 &rendering_params,
             );
-            render_close_button(
-                ui,
-                pinned_popup_vec_index,
-                &mut popup.state,
-                rendering_params,
-            );
+            render_close_button(ui, pinned_popup_vec_index, &mut popup.state);
         }
         let window_width = ui.window_size()[0];
         popup.state.width = Some(window_width);
     }
 
-    fn render_title_bar(ui: &Ui, popup: &mut Popup, cache: &mut Cache, bold_font: &Option<Font>) {
+    fn crop_title_to_ui_width(ui: &Ui, title: &str, max_ui_width: f32) -> String {
+        let title_size_width = ui.calc_text_size(title)[0];
+
+        if title_size_width <= max_ui_width {
+            return title.to_string();
+        }
+
+        let window_is_smaller_by_percentage = max_ui_width / title_size_width;
+
+        let title_char_count = title.chars().count();
+        let cut_off_character_count = ((title_char_count as f32 * window_is_smaller_by_percentage)
+            .floor() as usize)
+            .clamp(0, title_char_count);
+        format!(
+            "{}{}",
+            title
+                .chars()
+                .take(cut_off_character_count)
+                .collect::<String>(),
+            ".."
+        )
+    }
+
+    fn render_title_bar(
+        ui: &Ui,
+        popup: &mut Popup,
+        cache: &mut Cache,
+        bold_font: &Option<Font>,
+        rendering_params: &RenderingParams,
+    ) {
         let dimensions = match &popup.data.item_icon {
             Some(Token::Image(href, dimensions)) => Self::render_image(ui, href, dimensions, cache),
             _ => None,
         };
         ui.same_line();
+        let mut _token = None;
+        let processed_title = process_text(
+            Self::crop_title_to_ui_width(ui, &popup.data.title, rendering_params.max_content_width)
+                .as_str(),
+        );
         if let Some(bold_font) = bold_font {
-            let _token = bold_font.push();
-            if let Some(dimensions) = dimensions {
-                ui.text_vert_centered(
-                    &popup.data.title,
-                    &dimensions.height,
-                    &popup.state.collapsed,
-                );
-            } else {
-                ui.text_or_disabled(&popup.data.title, &popup.state.collapsed);
-                ui.spacing();
-            }
-        } else if let Some(dimensions) = dimensions {
-            ui.text_vert_centered(
-                &popup.data.title,
-                &dimensions.height,
-                &popup.state.collapsed,
-            );
+            _token = bold_font.push();
+        }
+
+        if let Some(dimensions) = dimensions {
+            ui.text_vert_centered(&processed_title, &dimensions.height, &popup.state.collapsed);
         } else {
-            ui.text_or_disabled(&popup.data.title, &popup.state.collapsed);
-            ui.spacing();
+            ui.text_or_disabled(&processed_title, &popup.state.collapsed);
+            ui.new_line();
         }
 
         if ui.is_item_hovered() {
@@ -89,7 +108,7 @@ impl Context {
             if ui.is_mouse_released(MouseButton::Left) {
                 if popup.state.title_dragging {
                     popup.state.title_dragging = false;
-                } else {
+                } else if rendering_params.allow_popup_collapsing {
                     popup.state.collapsed = !popup.state.collapsed;
                 }
             }
@@ -98,7 +117,7 @@ impl Context {
         }
     }
 
-    fn render_content(
+    fn render_popup_content(
         ui: &Ui<'_>,
         pinned_popup_vec_index: Option<usize>,
         popup: &mut Popup,
@@ -107,11 +126,15 @@ impl Context {
         bold_font: &Option<Font>,
         rendering_params: &RenderingParams,
     ) {
+        debug!("[render_popup_content]");
         if rendering_params.show_tag_bar {
             Self::render_tag_bar(ui, popup, ui_actions, rendering_params);
         }
         if popup.data.is_not_empty() {
-            if let Some(_token) = ui.tab_bar(format!("tabs##rps{}", popup.state.id)) {
+            if let Some(_token) = ui.tab_bar_with_flags(
+                format!("tabs##idp{}", popup.state.id),
+                TabBarFlags::FITTING_POLICY_RESIZE_DOWN,
+            ) {
                 Self::render_tab(
                     "General",
                     ui,
@@ -126,132 +149,30 @@ impl Context {
                     rendering_params,
                     true,
                 );
-                Self::render_tab(
-                    "Acquisition",
-                    ui,
-                    pinned_popup_vec_index,
-                    ui_actions,
-                    cache,
-                    bold_font,
-                    &None,
-                    &popup.data.acquisition,
-                    rendering_params.show_acquisition_tab,
-                    &mut popup.state,
-                    rendering_params,
-                    false,
-                );
-                Self::render_tab(
-                    "Teaches recipe",
-                    ui,
-                    pinned_popup_vec_index,
-                    ui_actions,
-                    cache,
-                    bold_font,
-                    &None,
-                    &popup.data.teaches_recipe,
-                    rendering_params.show_teaches_recipe_tab,
-                    &mut popup.state,
-                    rendering_params,
-                    false,
-                );
-                Self::render_tab(
-                    "Getting there",
-                    ui,
-                    pinned_popup_vec_index,
-                    ui_actions,
-                    cache,
-                    bold_font,
-                    &None,
-                    &popup.data.getting_there,
-                    rendering_params.show_getting_there_tab,
-                    &mut popup.state,
-                    rendering_params,
-                    false,
-                );
-                Self::render_tab(
-                    "Location",
-                    ui,
-                    pinned_popup_vec_index,
-                    ui_actions,
-                    cache,
-                    bold_font,
-                    &None,
-                    &popup.data.location,
-                    rendering_params.show_location_tab,
-                    &mut popup.state,
-                    rendering_params,
-                    false,
-                );
-                Self::render_tab(
-                    "Walkthrough",
-                    ui,
-                    pinned_popup_vec_index,
-                    ui_actions,
-                    cache,
-                    bold_font,
-                    &None,
-                    &popup.data.walkthrough,
-                    rendering_params.show_walkthrough_tab,
-                    &mut popup.state,
-                    rendering_params,
-                    false,
-                );
-                Self::render_tab(
-                    "Rewards",
-                    ui,
-                    pinned_popup_vec_index,
-                    ui_actions,
-                    cache,
-                    bold_font,
-                    &None,
-                    &popup.data.rewards,
-                    rendering_params.show_rewards_tab,
-                    &mut popup.state,
-                    rendering_params,
-                    false,
-                );
-                Self::render_tab(
-                    "Related achievements",
-                    ui,
-                    pinned_popup_vec_index,
-                    ui_actions,
-                    cache,
-                    bold_font,
-                    &None,
-                    &popup.data.related_achievements,
-                    rendering_params.show_related_achievements_tab,
-                    &mut popup.state,
-                    rendering_params,
-                    false,
-                );
-                Self::render_tab(
-                    "Contents",
-                    ui,
-                    pinned_popup_vec_index,
-                    ui_actions,
-                    cache,
-                    bold_font,
-                    &None,
-                    &popup.data.contents,
-                    rendering_params.show_contents_tab,
-                    &mut popup.state,
-                    rendering_params,
-                    false,
-                );
-                Self::render_tab(
-                    "Notes",
-                    ui,
-                    pinned_popup_vec_index,
-                    ui_actions,
-                    cache,
-                    bold_font,
-                    &None,
-                    &popup.data.notes,
-                    rendering_params.show_notes_tab,
-                    &mut popup.state,
-                    rendering_params,
-                    false,
-                );
+
+                for (section_name, tokens) in &popup.data.sections {
+                    if rendering_params
+                        .blacklisted_tabs
+                        .contains(&section_name.to_lowercase())
+                    {
+                        continue;
+                    }
+                    Self::render_tab(
+                        section_name,
+                        ui,
+                        pinned_popup_vec_index,
+                        ui_actions,
+                        cache,
+                        bold_font,
+                        &None,
+                        tokens,
+                        !rendering_params.blacklisted_tabs.contains(section_name),
+                        &mut popup.state,
+                        rendering_params,
+                        false,
+                    );
+                }
+
                 Self::render_images_tab(
                     ui,
                     pinned_popup_vec_index,
@@ -262,7 +183,16 @@ impl Context {
                 );
             }
         }
-        Self::render_button_ribbon(ui, pinned_popup_vec_index, popup, ui_actions);
+        Self::render_ribbon(
+            ui,
+            pinned_popup_vec_index,
+            popup,
+            ui_actions,
+            rendering_params,
+            cache,
+            popup.data.item_ids.clone(),
+            popup.state.item_quantity,
+        );
     }
 
     fn render_tab(
@@ -279,6 +209,7 @@ impl Context {
         rendering_params: &RenderingParams,
         general_tab: bool,
     ) {
+        debug!("[render_tab] render {tab_name} tab");
         if should_render && (!tokens.is_empty() || (general_tab && item_ids.is_some())) {
             let token = ui.tab_item(format!("{tab_name}##idp{}", popup_state.id));
             if ui.is_item_hovered()
@@ -292,24 +223,29 @@ impl Context {
                     Self::render_tokens(
                         ui,
                         &mut popup_state.pinned,
+                        popup_state.id,
+                        tab_name,
                         tokens,
                         ui_actions,
                         cache,
                         bold_font,
                         rendering_params,
+                        true,
                     );
                 };
-                if tokens.len() > NON_CHILD_WINDOW_TEXT_WRAP_LIMIT && !general_tab {
-                    let screen_height = ui.io().display_size[1];
+                let contains_table = tokens.iter().any(|t| matches!(t, Token::Table(..)));
+                if (tokens.len() > NON_CHILD_WINDOW_TEXT_WRAP_LIMIT || contains_table)
+                    && !general_tab
+                {
                     let cursor_pos_x = ui.cursor_pos()[0];
                     Self::next_window_size_constraints(
                         [
                             rendering_params.max_content_width - cursor_pos_x,
-                            screen_height * 0.15,
+                            rendering_params.max_content_height,
                         ],
                         [
                             rendering_params.max_content_width - cursor_pos_x,
-                            screen_height * 0.15,
+                            rendering_params.max_content_height,
                         ],
                     );
                     ChildWindow::new(format!("{tab_name}_scroll##idp{}", popup_state.id).as_str())
@@ -321,9 +257,6 @@ impl Context {
                 render_func();
                 if !tokens.is_empty() {
                     ui.new_line();
-                }
-                if item_ids.is_some() {
-                    Self::render_prices(ui, item_ids, cache, rendering_params);
                 }
             }
         }
@@ -372,6 +305,9 @@ impl Context {
                                                     ui.item_rect_max(),
                                                 )
                                                 .build();
+                                            // if ui.is_item_clicked() {
+                                            //     log::info!("Clicked on image: {}", href);
+                                            // }
                                         }
                                         ui.spacing();
                                     }
@@ -409,12 +345,18 @@ impl Context {
                 return;
             }
 
-            let screen_height = ui.io().display_size[1];
+            let cursor_pos_x = ui.cursor_pos()[0];
             Self::next_window_size_constraints(
-                [100.0, screen_height * 0.05],
-                [400.0, screen_height * 0.30],
+                [
+                    rendering_params.max_content_width - cursor_pos_x,
+                    rendering_params.max_content_height,
+                ],
+                [
+                    rendering_params.max_content_width - cursor_pos_x,
+                    rendering_params.max_content_height,
+                ],
             );
-            ChildWindow::new(format!("notes_scroll##rps{}", popup.state.id).as_str())
+            ChildWindow::new(format!("images_scroll##idp{}", popup.state.id).as_str())
                 .border(true)
                 .scroll_bar(true)
                 .build(ui, render_func);
@@ -432,50 +374,57 @@ impl Context {
         }
     }
 
-    fn render_button_ribbon(
+    fn render_ribbon(
         ui: &Ui<'_>,
         pinned_popup_vec_index: Option<usize>,
         popup: &mut Popup,
         ui_actions: &mut Vec<UiAction>,
+        rendering_params: &RenderingParams,
+        cache: &mut Cache,
+        item_ids: Option<Vec<u32>>,
+        item_quantity: usize,
     ) {
-        if let Some(index) = pinned_popup_vec_index {
-            ui.spacing();
-
-            if ui.button(format!("Open wiki##idp{}", popup.state.id)) {
-                let href = popup
-                    .data
-                    .redirection_href
-                    .as_ref()
-                    .unwrap_or(&popup.data.href);
-                if let Err(err) = open::that_detached(href_to_wiki_url(href)) {
-                    log::error!("Failed to open wiki url: {err}");
-                }
+        ui.separator();
+        ui.text_colored(rendering_params.link_color, "Open wiki");
+        if ui.is_item_clicked() {
+            let href = popup
+                .data
+                .redirection_href
+                .as_ref()
+                .unwrap_or(&popup.data.href);
+            if let Err(err) = open::that_detached(href_to_wiki_url(href)) {
+                error!("Failed to open wiki url: {err}");
             }
-
-            ui.same_line();
-
-            if ui.button(format!("More..##idp{}", popup.state.id)) {
-                ui.open_popup(format!("##Popup_idp{}", popup.state.id));
-            }
-            ui.popup(format!("##Popup_idp{}", popup.state.id), || {
-                if MenuItem::new(format!("Refresh##idp{}", popup.state.id)).build(ui) {
-                    popup.state.pos = Some(ui.window_pos());
+        }
+        ui.same_line();
+        ui.text_disabled(" | ");
+        ui.same_line();
+        ui.text_colored(rendering_params.link_color, "More..");
+        if ui.is_item_clicked() {
+            ui.open_popup(format!("##Popup_idp{}", popup.state.id));
+        }
+        ui.popup(format!("##Popup_idp{}", popup.state.id), || {
+            if MenuItem::new(format!("Refresh##idp{}", popup.state.id)).build(ui) {
+                popup.state.pos = Some(ui.window_pos());
+                if let Some(index) = pinned_popup_vec_index {
                     ui_actions.push(UiAction::Refresh(index));
                 }
-                if ui.is_item_hovered() {
-                    ui.tooltip(|| {
-                        let formatted_date = popup.data.cached_date.format("%d-%m-%Y %H:%M");
-                        ui.text(format!("Last refreshed on {}", formatted_date));
-                    });
-                }
-                if MenuItem::new(format!("Copy name##idp{}", popup.state.id)).build(ui) {
-                    let name = popup.data.title.clone();
-                    lock_threads().push(thread::spawn(move || {
-                        let _ = write_context().clipboard.set_text(name.as_str());
-                    }));
-                }
-            });
-        }
+            }
+            if ui.is_item_hovered() {
+                ui.tooltip(|| {
+                    let formatted_date = popup.data.cached_date.format("%d-%m-%Y %H:%M");
+                    ui.text(format!("Last refreshed on {}", formatted_date));
+                });
+            }
+            if MenuItem::new(format!("Copy name##idp{}", popup.state.id)).build(ui) {
+                let name = popup.data.title.clone();
+                lock_threads().push(thread::spawn(move || {
+                    let _ = write_context().clipboard.set_text(name.as_str());
+                }));
+            }
+        });
+        ui.same_line();
+        Self::render_prices(ui, &item_ids, cache, rendering_params, item_quantity);
     }
 
     fn render_tag_bar(
@@ -489,9 +438,7 @@ impl Context {
             for (_, tag) in tag_iterator {
                 let cursor_pos: [f32; 2] = ui.cursor_pos();
                 let text_width = ui.calc_text_size(&tag.1)[0];
-                if *cursor_pos.first().unwrap() + text_width + rendering_params.content_margin_right
-                    > rendering_params.max_content_width
-                {
+                if *cursor_pos.first().unwrap() + text_width > rendering_params.max_content_width {
                     ui.new_line();
                 }
                 ui.text_colored(rendering_params.link_color, format!("[{}]", tag.1));
@@ -515,16 +462,12 @@ fn render_close_button(
     ui: &Ui<'_>,
     pinned_popup_vec_index: Option<usize>,
     popup_state: &mut PopupState,
-    rendering_params: RenderingParams,
 ) {
     let window_width = ui.window_size()[0];
     let is_resizing = window_width != popup_state.width.unwrap_or(window_width);
     if pinned_popup_vec_index.is_some()
         && !is_resizing
-        && ui.close_button(
-            format!("##idp_close{}", popup_state.id),
-            &rendering_params.max_content_width,
-        )
+        && ui.close_button(format!("##idp_close{}", popup_state.id), &window_width)
     {
         popup_state.opened = false
     }

@@ -6,15 +6,16 @@ use serde::{Deserialize, Serialize};
 use super::token::Token;
 use crate::configuration::config::config_dir;
 
+use crate::configuration::config::read_config;
 use crate::state::cache::cache::{is_cache_expired, Persist, StoreInCache};
 use indexmap::IndexMap;
 use log::{debug, info, trace, warn};
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
 use std::path::PathBuf;
-use crate::configuration::config::read_config;
 
 pub type PopupDataCache = IndexMap<String, PopupData>;
+pub type SectionName = String;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PopupData {
@@ -22,15 +23,7 @@ pub struct PopupData {
     pub item_icon: Option<Token>,
     pub title: String,
     pub description: Vec<Token>,
-    pub getting_there: Vec<Token>,
-    pub contents: Vec<Token>,
-    pub location: Vec<Token>,
-    pub notes: Vec<Token>,
-    pub walkthrough: Vec<Token>,
-    pub rewards: Vec<Token>,
-    pub related_achievements: Vec<Token>,
-    pub acquisition: Vec<Token>,
-    pub teaches_recipe: Vec<Token>,
+    pub sections: IndexMap<SectionName, Vec<Token>>,
     pub images: Vec<Token>,
     // tag href, tag name
     pub tags: BTreeMap<String, String>,
@@ -42,15 +35,7 @@ pub struct PopupData {
 impl PopupData {
     pub fn is_not_empty(&self) -> bool {
         !self.description.is_empty()
-            || !self.getting_there.is_empty()
-            || !self.contents.is_empty()
-            || !self.location.is_empty()
-            || !self.notes.is_empty()
-            || !self.acquisition.is_empty()
-            || !self.teaches_recipe.is_empty()
-            || !self.walkthrough.is_empty()
-            || !self.rewards.is_empty()
-            || !self.related_achievements.is_empty()
+            || self.sections.iter().any(|(_, tokens)| !tokens.is_empty())
             || !self.images.is_empty()
             || self.item_ids.is_some()
     }
@@ -63,15 +48,7 @@ impl Default for PopupData {
             item_icon: None,
             title: "".to_string(),
             description: vec![],
-            getting_there: vec![],
-            contents: vec![],
-            location: vec![],
-            notes: vec![],
-            acquisition: vec![],
-            teaches_recipe: vec![],
-            walkthrough: vec![],
-            rewards: vec![],
-            related_achievements: vec![],
+            sections: Default::default(),
             images: vec![],
             tags: BTreeMap::new(),
             cached_date: Local::now(),
@@ -113,8 +90,7 @@ impl Persist for PopupDataCache {
         match File::create(&path) {
             Ok(file) => {
                 let writer = BufWriter::new(file);
-                serde_json::to_writer_pretty(writer, self)
-                    .expect("failed to serialize popup_data");
+                serde_json::to_writer_pretty(writer, self).expect("failed to serialize popup_data");
                 info!(
                     "[save_popup_data_map] Saved popup data cache to \"{}\"",
                     path.display()
@@ -130,7 +106,7 @@ impl Persist for PopupDataCache {
 }
 
 impl<'a> StoreInCache<'a, PopupDataCache, PopupData, &'a String, &'a mut PopupData>
-for PopupDataCache
+    for PopupDataCache
 {
     fn retrieve(&'a mut self, key: &'a String) -> Option<PopupData> {
         debug!(

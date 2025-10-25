@@ -6,11 +6,11 @@ Item detail popups for Nexus (Guild Wars 2 addon manager).
 - Open popups on hovered item or by typing search phrase manually.
 - Manually type and search for articles on wiki.
 - Quickly check prices of items on the trading post.
-- POE2-inspired, interactable popup system which allows browsing subsequent wiki pages for information.
+- POE2-inspired, interactable popup system which allows browsing wiki pages for information.
 - Designed for speed, with caching mechanisms to improve speed and reduce data usage.
 
 ## Disclaimer
-This addon uses **macros** (virtual key-presses) to get item chat link from chatbox. Refer to [macro policy](https://help.guildwars2.com/hc/en-us/articles/360013762153-Policy-Macros-and-Macro-Use) for more details about macro usage.
+This addon uses **macros** (virtual key-presses) to get an item chat link from chatbox. Refer to [macro policy](https://help.guildwars2.com/hc/en-us/articles/360013762153-Policy-Macros-and-Macro-Use) for more details about macro usage.
 
 ## Installation
 1. Install the [Nexus](https://github.com/RaidcoreGG/Nexus) addon manager ([website](https://raidcore.gg/Nexus)).
@@ -19,11 +19,11 @@ This addon uses **macros** (virtual key-presses) to get item chat link from chat
 
 ## Screenshots & Usage
 ### From inventory
-Hover over item in the inventory and press a keybind (default CTRL+SHIFT+X).
+Hover over an item in the inventory and press a keybind (default CTRL+SHIFT+X).
 ![](images/from_inventory.png)
 
 ### From crafting window
-Hover over item name on the crafting list and press a keybind.
+Hover over an item name on the crafting list and press a keybind.
 ![](images/from_crafting_window.png)
 
 ### From trading post
@@ -40,8 +40,8 @@ Press a custom search keybind (default CTRL+SHIFT+F) and enter a search phrase t
 ![](images/from_search_jumping_puzzle_result.png)
 
 ## Solving common problems
-1. Popup doesn't open (loading spinner dissapears)
-    - Make sure english in-game language is used. Other languages are not supported.
+1. Popup doesn't open (loading spinner disappears)
+    - Make sure English in-game language is used. Other languages are not supported.
     - In case of using an uncommon keyboard layout, try changing the layout in advanced settings.
     - Try increasing macro delay in advanced settings.
 2. Popup keybind triggers Guild Wars 2 action bound to the right shift.
@@ -49,7 +49,7 @@ Press a custom search keybind (default CTRL+SHIFT+F) and enter a search phrase t
 
 ## Reporting issues
 In case of any further problems or feature requests, please raise them in one of following ways:
-- On github,
+- On GitHub,
 - Message me in game (lorkano.4609),
 - Use [discord channel](https://discord.com/channels/410828272679518241/1321117612209602601).
 

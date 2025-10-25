@@ -1,5 +1,5 @@
-use crate::state::cache::cached_data::CachedData;
 use crate::configuration::config::config_dir;
+use crate::state::cache::cached_data::CachedData;
 use log::info;
 use log::warn;
 use std::collections::HashMap;

@@ -1,25 +1,31 @@
+use crate::configuration::popup::rendering_params::RenderingParams;
+use crate::core::utils::ui::{UiAction, UiExtended, UiLink, HIGHLIGHT_COLOR};
 use crate::state::cache::cache::{Cache, StoreInCache};
 use crate::state::cache::caching_status::CachingStatus;
-use crate::configuration::popup::rendering_params::RenderingParams;
 use crate::state::context::Context;
 use crate::state::font::Font;
 use crate::state::popup::dimensions::Dimensions;
 use crate::state::popup::style::Style;
+use crate::state::popup::table_params::TableParams;
 use crate::state::popup::tag_params::TagParams;
 use crate::state::popup::token::Token;
-use nexus::imgui::{MouseButton, Ui};
-use crate::core::utils::ui::{UiAction, UiExtended, UiLink, HIGHLIGHT_COLOR};
+use log::debug;
+use nexus::imgui::{MouseButton, TableFlags, Ui};
 
 impl Context {
     pub fn render_tokens(
         ui: &Ui,
         pinned: &mut bool,
+        popup_id: u64,
+        section_label: &str,
         tokens: &Vec<Token>,
         ui_actions: &mut Vec<UiAction>,
         cache: &mut Cache,
         bold_font: &Option<Font>,
         rendering_params: &RenderingParams,
+        render_tables: bool,
     ) {
+        debug!("[render_tokens]");
         let item_spacing_style = ui.push_style_var(nexus::imgui::StyleVar::ItemSpacing([0.0, 5.0]));
         ui.spacing();
         let mut starts_with_list = tokens
@@ -56,12 +62,102 @@ impl Context {
                     rendering_params.use_bullet_list_punctuation,
                 ),
                 Token::Image(href, dimensions) => {
+                    ui.text(" ");
+                    ui.same_line();
                     let _ = Self::render_image(ui, href, dimensions, cache);
+                }
+                Token::Table(table_params) => {
+                    if render_tables {
+                        Self::render_table(
+                            ui,
+                            pinned,
+                            popup_id,
+                            section_label,
+                            ui_actions,
+                            cache,
+                            bold_font,
+                            rendering_params,
+                            table_params,
+                        )
+                    }
                 }
             }
             last_token = Some(token);
         }
         item_spacing_style.pop();
+    }
+
+    fn render_table(
+        ui: &Ui,
+        pinned: &mut bool,
+        popup_id: u64,
+        section_label: &str,
+        ui_actions: &mut Vec<UiAction>,
+        cache: &mut Cache,
+        bold_font: &Option<Font>,
+        rendering_params: &RenderingParams,
+        table_params: &TableParams,
+    ) {
+        debug!("[render_table] {table_params:?}");
+        if let Some(_t) = ui.begin_table_with_flags(
+            format!(
+                "table_{}_{}_{}##idp",
+                table_params.uuid, popup_id, section_label
+            ),
+            table_params.headers.len(),
+            TableFlags::RESIZABLE | TableFlags::NO_SAVED_SETTINGS,
+        ) {
+            debug!("[render_table setup headers]");
+            for header in &table_params.headers {
+                ui.table_setup_column(header);
+            }
+            ui.table_headers_row();
+            Self::render_table_rows(
+                ui,
+                pinned,
+                popup_id,
+                section_label,
+                ui_actions,
+                cache,
+                bold_font,
+                rendering_params,
+                table_params,
+            );
+        }
+    }
+
+    fn render_table_rows(
+        ui: &Ui,
+        pinned: &mut bool,
+        popup_id: u64,
+        section_label: &str,
+        ui_actions: &mut Vec<UiAction>,
+        cache: &mut Cache,
+        bold_font: &Option<Font>,
+        rendering_params: &RenderingParams,
+        table_params: &TableParams,
+    ) {
+        debug!("[render_table_rows]");
+        for row in &table_params.rows {
+            ui.table_next_row();
+            for cell in &row.cells {
+                ui.table_next_column();
+                debug!("[render_table_rows] recursion");
+                Self::render_tokens(
+                    ui,
+                    pinned,
+                    popup_id,
+                    section_label,
+                    &cell.tokens,
+                    ui_actions,
+                    cache,
+                    bold_font,
+                    rendering_params,
+                    false,
+                );
+                debug!("[render_table_rows] recursion end");
+            }
+        }
     }
 
     fn render_words<F>(
@@ -133,7 +229,7 @@ impl Context {
         if let Some(output) = dimensions
             .as_ref()
             .filter(|d| ui.not_in_view(&d.height))
-            .map(|d| Self::render_dummy(ui, d, href))
+            .map(|d| Self::render_placeholder(ui, d, href))
         {
             return output;
         }
@@ -157,14 +253,14 @@ impl Context {
                 _ => {
                     return dimensions
                         .as_ref()
-                        .and_then(|d| Self::render_dummy(ui, d, href))
+                        .and_then(|d| Self::render_placeholder(ui, d, href))
                 }
             }
         }
         None
     }
 
-    fn render_dummy(ui: &Ui, dimensions: &Dimensions, href: &str) -> Option<Dimensions> {
+    fn render_placeholder(ui: &Ui, dimensions: &Dimensions, href: &str) -> Option<Dimensions> {
         let (width, height) = dimensions.tuple();
         ui.invisible_button(href, [width, height]);
         Some(dimensions.clone())
@@ -225,9 +321,7 @@ impl Context {
         rendering_params: &RenderingParams,
     ) {
         let cursor_pos = ui.cursor_pos();
-        if cursor_pos[0] + word_width + rendering_params.content_margin_right
-            > rendering_params.max_content_width
-        {
+        if cursor_pos[0] + word_width > rendering_params.max_content_width {
             ui.new_line();
             Self::add_indent(ui, current_indent);
         }

@@ -1,21 +1,23 @@
-use crate::core::http_client::get_sync;
-use crate::state::cache::texture::identifier_to_filename;
-use crate::state::cache::cache::StoreInCache;
 use crate::configuration::config::textures_dir;
+use crate::core::http_client::get_sync;
+use crate::state::cache::cache::StoreInCache;
+use crate::state::cache::texture::identifier_to_filename;
+use crate::state::context::{read_context, write_context};
 use crate::state::popup::dimensions::Dimensions;
-use crate::state::popup::popup_data::PopupData;
+use crate::state::popup::popup_data::{PopupData, SectionName};
 use crate::state::popup::style::Style::{self, Bold, Normal};
+use crate::state::popup::table_params::{TableCell, TableParams, TableRow};
 use crate::state::popup::tag_params::TagParams;
 use crate::state::popup::token::Token;
 use crate::state::popup::Popup;
 use ego_tree::NodeRef;
-use log::{debug, error, trace};
+use indexmap::IndexMap;
+use log::{debug, error, trace, warn};
 use scraper::selectable::Selectable;
 use scraper::{CaseSensitivity, ElementRef, Html, Node, Selector};
 use std::fs::{self, File};
 use std::io::copy;
 use std::ops::Deref;
-use crate::state::context::{read_context, write_context};
 
 const GW2_WIKI_URL: &str = "https://wiki.guildwars2.com";
 const ITEM_ID_SPECIAL_SEARCH: &str =
@@ -32,22 +34,22 @@ pub fn href_to_wiki_url(href: &String) -> String {
     result
 }
 
-pub fn prepare_item_popup(item_name: &str) -> Popup {
+pub fn prepare_item_popup_with_quantity(item_name: &str, item_quantity: &usize) -> Popup {
     debug!(
         "[prepare_item_popup] Preparing popup for item: {}",
         item_name
     );
     let item_name_href = format!("/wiki/{}", item_name.replace(" ", "_"));
-    let mut popup = prepare_popup(&item_name_href, item_name.to_owned());
+    let mut popup =
+        prepare_popup_with_quantity(&item_name_href, item_name.to_owned(), item_quantity);
     write_context().ui.loading_progress = Some(10);
-    if let Some(mut cached_data) = write_context()
+    if let Some(cached_data) = write_context()
         .cache
         .popup_data_map
         .retrieve(&item_name_href)
     {
-        cached_data.item_ids = popup.data.item_ids.clone();
-        cached_data.title = popup.data.title.clone();
-        return Popup::new(cached_data);
+        popup.data = cached_data;
+        return popup;
     }
     if !fill_wiki_details(&item_name_href, &mut popup) {
         write_context().ui.loading_progress = Some(50);
@@ -63,7 +65,15 @@ pub fn prepare_item_popup(item_name: &str) -> Popup {
         .cache
         .popup_data_map
         .store(&item_name_href, &mut popup.data);
+    debug!(
+        "[prepare_item_popup] Popup prepared for item: {}",
+        item_name
+    );
     popup
+}
+
+pub fn prepare_item_popup(item_name: &str) -> Popup {
+    prepare_item_popup_with_quantity(item_name, &1)
 }
 
 #[allow(clippy::result_large_err)]
@@ -146,8 +156,12 @@ pub fn prepare_href_popup(href: &String, title: String) -> Popup {
 }
 
 fn prepare_popup(href: &str, title: String) -> Popup {
+    prepare_popup_with_quantity(href, title, &1)
+}
+
+fn prepare_popup_with_quantity(href: &str, title: String, item_quantity: &usize) -> Popup {
     debug!(
-        "[prepare_popup] Preparing popup for href: {}, title: {}",
+        "[prepare_popup_with_quantity] Preparing popup for href: {}, title: {}",
         href, title
     );
     let mut data = PopupData {
@@ -158,7 +172,9 @@ fn prepare_popup(href: &str, title: String) -> Popup {
     if let Some(item_names) = read_context().cache.item_names.value() {
         data.item_ids = item_names.get(&title).cloned();
     }
-    Popup::new(data)
+    let mut result = Popup::new(data);
+    result.state.item_quantity = *item_quantity;
+    result
 }
 
 pub fn fill_wiki_details(href: &String, popup: &mut Popup) -> bool {
@@ -177,34 +193,11 @@ pub fn fill_wiki_details(href: &String, popup: &mut Popup) -> bool {
                 fill_item_icon(&document, popup);
                 fill_tags(&document, popup);
                 fill_description(&document, popup);
-                fill_data(
-                    "h2:has(#Getting_there)",
-                    &document,
-                    &mut popup.data.getting_there,
-                );
-                fill_data(
-                    "h2:has(#Acquisition)",
-                    &document,
-                    &mut popup.data.acquisition,
-                );
-                fill_data(
-                    "h2:has(#Teaches_recipe)",
-                    &document,
-                    &mut popup.data.teaches_recipe,
-                );
-                fill_data("h2:has(#Contents)", &document, &mut popup.data.contents);
-                fill_data(
-                    "h2:has(#Walkthrough)",
-                    &document,
-                    &mut popup.data.walkthrough,
-                );
-                fill_data("h2:has(#Rewards)", &document, &mut popup.data.rewards);
-                fill_data("h2:has(#Location)", &document, &mut popup.data.location);
-                fill_data(
-                    "h2:has(#Related_achievements)",
-                    &document,
-                    &mut popup.data.related_achievements,
-                );
+                let section_selector = Selector::parse("h2").unwrap();
+                let sections = document.select(&section_selector);
+                for section in sections {
+                    fill_data(section, &mut popup.data.sections);
+                }
                 fill_notes(&document, popup);
                 fill_images(&document, popup);
                 true
@@ -215,13 +208,14 @@ pub fn fill_wiki_details(href: &String, popup: &mut Popup) -> bool {
             }
         },
         Err(e) => {
-            error!("[fill_wiki_details] could not fetch data from wiki: {}", e);
+            warn!("[fill_wiki_details] could not fetch data from wiki: {}", e);
             false
         }
     }
 }
 
 fn fill_tags(document: &Html, popup: &mut Popup) {
+    debug!("[fill_tags]");
     let blockquote_selector = Selector::parse(":not(h2) + blockquote").unwrap();
     if let Some(tag_element) = document.select(&blockquote_selector).next() {
         let link_selector = Selector::parse("a:not(.external, .extiw)").unwrap();
@@ -269,6 +263,7 @@ fn skip_to_element<'a>(
 }
 
 fn fill_description(document: &Html, popup: &mut Popup) {
+    debug!("[fill_description]");
     let description_start_selector = Selector::parse(
         "div.mw-parser-output > p:not(:has(.wikipopup, script, small)):not(.mw-empty-elt)",
     )
@@ -296,24 +291,39 @@ fn fill_description(document: &Html, popup: &mut Popup) {
     popup.data.description = description;
 }
 
-fn fill_data(selector: &str, doc: &Html, tokens: &mut Vec<Token>) {
-    if let Some(doc_pos) = doc.select(&Selector::parse(selector).unwrap()).next() {
-        let mut next = doc_pos.next_sibling();
-        while let Some(node) = next {
-            trace!("[fill data] loop {selector}");
-            if let Some(element) = ElementRef::wrap(node) {
-                let tag_name = element.value().name();
-                if !["dl", "ul", "p", "div", "h3", "table"].contains(&tag_name) {
-                    break;
-                }
-                parse_node(tokens, node);
-            }
+fn fill_data(doc_pos: ElementRef, sections: &mut IndexMap<SectionName, Vec<Token>>) {
+    debug!("[fill_section] {doc_pos:?}");
+
+    let mut data = vec![];
+    let headline_selector = Selector::parse(".mw-headline").unwrap();
+    let Some(id) = doc_pos
+        .select(&headline_selector)
+        .next()
+        .and_then(|h| h.attr("id"))
+        .map(|id| id.replace("_", " "))
+    else {
+        return;
+    };
+
+    let mut next = doc_pos.next_sibling();
+    while let Some(node) = next {
+        let Some(element) = ElementRef::wrap(node) else {
             next = node.next_sibling();
+            continue;
+        };
+
+        let tag_name = element.value().name();
+        if !["dl", "ul", "p", "div", "h3", "table"].contains(&tag_name) {
+            break;
         }
+        parse_node(&mut data, node);
+        next = node.next_sibling();
     }
+    sections.insert(id.to_string(), data);
 }
 
 fn fill_notes(document: &Html, popup: &mut Popup) {
+    debug!("[fill_notes]");
     let notes_start_selector = Selector::parse("h2:has(#Notes) + ul").unwrap();
     let mut notes: Vec<Token> = vec![];
     if let Some(start) = document.select(&notes_start_selector).next() {
@@ -325,30 +335,33 @@ fn fill_notes(document: &Html, popup: &mut Popup) {
             parse_node(&mut notes, node);
         }
     }
-    popup.data.notes = notes;
+    popup.data.sections.insert("Notes".to_string(), notes);
 }
 
 fn fill_images(document: &Html, popup: &mut Popup) {
+    debug!("[fill_images]");
     let images_start_selector = Selector::parse(".infobox table img, .gallery img").unwrap();
     let mut images: Vec<Token> = vec![];
     let img_elements = document.select(&images_start_selector);
     for img in img_elements {
-        let href = img.attr("src");
-        if href.is_none() {
+        let Some(href) = img.attr("src") else {
             continue;
-        }
-        images.push(Token::Image(href.unwrap().to_string(), None));
+        };
+        images.push(Token::Image(href.to_string(), None));
         if let Some(parent) = img.parent() {
-            if let Some(next_sibling) = parent.next_sibling() {
-                let element = ElementRef::wrap(next_sibling);
-                if let Some(element) = element {
-                    if element.value().name() == "p" {
-                        let text = element.text().collect::<Vec<_>>().join(" ");
-                        let processed = process_text(&text);
-                        if !processed.is_empty() && !processed.to_lowercase().contains("click") {
-                            images.push(Token::Text(processed, Normal));
-                        }
-                    }
+            if let Some(title) = ElementRef::wrap(parent).and_then(|e| e.value().attr("title")) {
+                images.push(Token::Text(title.to_string(), Normal));
+                continue;
+            }
+            if let Some(element) = parent
+                .next_sibling()
+                .and_then(ElementRef::wrap)
+                .filter(|e| e.value().name() == "p")
+            {
+                let text = element.text().collect::<Vec<_>>().join(" ");
+                let processed_text = process_text(&text);
+                if !processed_text.is_empty() && !processed_text.to_lowercase().contains("click") {
+                    images.push(Token::Text(processed_text, Normal));
                 }
             }
         }
@@ -357,16 +370,12 @@ fn fill_images(document: &Html, popup: &mut Popup) {
 }
 
 fn fill_item_icon(document: &Html, popup: &mut Popup) {
+    debug!("[fill_item_icon]");
     let item_icon_selector = Selector::parse(".infobox-icon img").unwrap();
     if let Some(img) = document.select(&item_icon_selector).next() {
-        let href = img.attr("src");
-        if href.is_none() {
-            return;
-        }
-        popup.data.item_icon = Some(Token::Image(
-            href.unwrap().to_string(),
-            Some(Dimensions::medium()),
-        ));
+        let Some(href) = img.attr("src") else { return };
+
+        popup.data.item_icon = Some(Token::Image(href.to_string(), Some(Dimensions::medium())));
     }
 }
 
@@ -382,23 +391,24 @@ pub fn special_search(item_id: Option<u32>, href: &String) -> Option<(String, St
                     let selector = format!(r#"td[data-sort-value="{}"]"#, item_id);
                     let item_selector = Selector::parse(selector.as_str()).unwrap();
                     if let Some(tag_element) = document.select(&item_selector).next() {
-                        if let Some(parent) = tag_element.parent() {
-                            if parent.value().is_element() {
-                                let element = ElementRef::wrap(parent).unwrap();
+                        return tag_element.parent().and_then(ElementRef::wrap).and_then(
+                            |element| {
                                 let link_selector = Selector::parse("a").unwrap();
-                                if let Some(a_element) = element.select(&link_selector).next() {
+                                if let Some(link_element) = element.select(&link_selector).next() {
                                     let mut result: (String, String) =
                                         ("".to_string(), "".to_string());
-                                    if let Some(href) = a_element.value().attr("href") {
+                                    if let Some(href) = link_element.value().attr("href") {
                                         result.0 = href.split("#").next().unwrap_or("").to_string();
                                     }
-                                    if let Some(title) = a_element.value().attr("title") {
+                                    if let Some(title) = link_element.value().attr("title") {
                                         result.1 = title.to_string();
                                     }
-                                    return Some(result);
+                                    Some(result)
+                                } else {
+                                    None
                                 }
-                            }
-                        }
+                            },
+                        );
                     }
                 }
                 let selector_alternative = r#".mw-search-result-heading a"#.to_string();
@@ -439,81 +449,10 @@ fn parse_node_with_style(
     style: &mut Style,
     indent_depth: &mut i32,
 ) {
-    if node.value().is_element() {
-        let element = ElementRef::wrap(node).unwrap();
-        let mut children_iterator = element.children();
-        if matches!(element.value().name(), "script" | "sup" | "style" | "table") {
-            if element.value().name() == "table" {
-                result.push(Token::Spacing);
-                result.push(Token::Text(
-                    "(open wiki to see the table)".to_string(),
-                    Style::Disabled,
-                ));
-            }
-            return;
-        }
-        if let Some(class) = element.value().attr("class") {
-            if class.contains("mw-editsection")
-                || class.contains("external")
-                || class.contains("extiw")
-            {
-                return;
-            }
-        }
-        if let Some(style) = element.value().attr("style") {
-            if style.contains("display:none") {
-                return;
-            }
-        }
-        if let Some(href) = element.value().attr("href") {
-            if let Some(child) = children_iterator.next() {
-                let child_el = ElementRef::wrap(child);
-                if let Some(child_el) = child_el {
-                    if let Some(src) = child_el.value().attr("src") {
-                        result.push(Token::Image(src.to_string(), Some(Dimensions::small())));
-                    }
-                }
-                if let Some(text) = child.value().as_text() {
-                    let text = process_text(&text.text);
-                    let mut title = text.clone();
-                    if let Some(title_attr) = element.value().attr("title") {
-                        title = process_text(title_attr);
-                    }
-                    result.push(Token::Tag(TagParams {
-                        href: href.split("#").next().unwrap_or("").to_string(),
-                        text,
-                        title,
-                    }));
-                }
-            }
-        } else {
-            match element.value().name() {
-                "a" | "b" => *style = Bold,
-                "ul" => {
-                    *indent_depth += 1;
-                    result.push(Token::Indent(*indent_depth));
-                }
-                "li" => result.push(Token::ListElement),
-                "dt" | "h3" | "dl" => result.push(Token::Spacing),
-                "img" => {
-                    if let Some(src) = element.value().attr("src") {
-                        result.push(Token::Image(src.to_string(), Some(Dimensions::small())));
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        for child in children_iterator {
-            parse_node_with_style(result, child, style, indent_depth);
-        }
-
-        if element.value().name() == "ul" {
-            *indent_depth -= 1;
-            result.push(Token::Indent(*indent_depth));
-        }
-        *style = Normal;
+    if let Some(element) = ElementRef::wrap(node) {
+        parse_element_node(result, style, indent_depth, &element);
     }
+
     if let Some(text) = node.value().as_text() {
         let processed = process_text(&text.text);
         if !processed.is_empty() {
@@ -522,7 +461,148 @@ fn parse_node_with_style(
     }
 }
 
-fn process_text(text: &str) -> String {
+fn parse_element_node(
+    result: &mut Vec<Token>,
+    style: &mut Style,
+    indent_depth: &mut i32,
+    element: &ElementRef,
+) {
+    let mut children_iterator = element.children();
+    if matches!(element.value().name(), "script" | "sup" | "style" | "table") {
+        if element.value().name() == "table" {
+            parse_table(element, result);
+        }
+        return;
+    }
+    if let Some(class) = element.value().attr("class") {
+        if class.contains("mw-editsection") || class.contains("external") || class.contains("extiw")
+        {
+            return;
+        }
+    }
+    if let Some(style) = element.value().attr("style") {
+        if style.contains("display:none") {
+            return;
+        }
+    }
+    if let Some(href) = element.value().attr("href") {
+        if let Some(child) = children_iterator.next() {
+            let child_el = ElementRef::wrap(child);
+            if let Some(child_el) = child_el {
+                if let Some(src) = child_el.value().attr("src") {
+                    result.push(Token::Image(src.to_string(), Some(Dimensions::small())));
+                }
+            }
+            if let Some(text) = child.value().as_text() {
+                let text = process_text(&text.text);
+                let mut title = text.clone();
+                if let Some(title_attr) = element.value().attr("title") {
+                    title = process_text(title_attr);
+                }
+                result.push(Token::Tag(TagParams {
+                    href: href.split("#").next().unwrap_or("").to_string(),
+                    text,
+                    title,
+                }));
+            }
+        }
+    } else {
+        match element.value().name() {
+            "a" | "b" | "dt" => *style = Bold,
+            "ul" => {
+                *indent_depth += 1;
+                result.push(Token::Indent(*indent_depth));
+            }
+            "li" => result.push(Token::ListElement),
+            "h3" | "dl" => result.push(Token::Spacing),
+            "img" => {
+                if let Some(src) = element.value().attr("src") {
+                    result.push(Token::Image(src.to_string(), Some(Dimensions::small())));
+                }
+            }
+            _ => {}
+        }
+    }
+
+    for child in children_iterator {
+        parse_node_with_style(result, child, style, indent_depth);
+    }
+
+    if element.value().name() == "ul" {
+        *indent_depth -= 1;
+        result.push(Token::Indent(*indent_depth));
+    }
+    *style = Normal;
+}
+
+fn parse_table(element: &ElementRef, result: &mut Vec<Token>) {
+    if let Some(class) = element.value().attr("class") {
+        if class.contains("mech1") {
+            result.push(Token::Text(
+                "Open wiki to see the table".to_string(),
+                Style::Disabled,
+            ));
+            return;
+        }
+    }
+
+    let mut table_params = TableParams::new();
+    table_params.headers = parse_table_headers(element);
+    table_params.rows = parse_table_rows(element);
+    if table_params.headers.is_empty() {
+        let max_cells = table_params
+            .rows
+            .iter()
+            .map(|row| row.cells.len())
+            .max()
+            .unwrap_or(0);
+        for _ in 0..max_cells {
+            table_params.headers.push(String::new());
+        }
+    }
+    result.push(Token::Spacing);
+    result.push(Token::Table(table_params));
+    result.push(Token::Spacing);
+}
+
+fn parse_table_rows(element: &ElementRef) -> Vec<TableRow> {
+    let mut table_rows = vec![];
+    let row_selector = Selector::parse("tbody > tr").unwrap();
+    let rows = element.select(&row_selector);
+    for row in rows {
+        table_rows.push(parse_table_row(&row));
+    }
+    table_rows
+}
+
+fn parse_table_row(row: &ElementRef) -> TableRow {
+    let mut table_row = TableRow::new();
+    let cell_selector = Selector::parse("tr > td").unwrap();
+    let cells = row.select(&cell_selector);
+    for cell in cells {
+        table_row.cells.push(parse_table_cell(&cell))
+    }
+    table_row
+}
+
+fn parse_table_cell(cell: &ElementRef) -> TableCell {
+    let mut table_cell = TableCell::new();
+    parse_node(&mut table_cell.tokens, *cell.deref());
+    table_cell
+}
+
+fn parse_table_headers(element: &ElementRef) -> Vec<String> {
+    let mut table_headers = vec![];
+
+    let header_selector = Selector::parse("th").unwrap();
+    let headers = element.select(&header_selector);
+    for header in headers {
+        table_headers.push(header.text().collect::<Vec<_>>().join(" "));
+    }
+    table_headers
+}
+
+pub fn process_text(text: &str) -> String {
     let result = text.trim().replace("—", "-").replace("“", "\"").to_string();
     if result == "\"" {
         return "".to_string();

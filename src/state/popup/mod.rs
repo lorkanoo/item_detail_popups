@@ -4,6 +4,7 @@ pub mod dimensions;
 pub mod popup_data;
 pub mod popup_state;
 pub mod style;
+pub mod table_params;
 pub mod tag_params;
 pub mod token;
 
