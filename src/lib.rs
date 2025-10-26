@@ -36,7 +36,10 @@ pub mod state {
 }
 
 mod api {
-    pub mod gw2_api;
+    pub mod gw2 {
+        pub mod response;
+        pub mod service;
+    }
     pub mod gw2_tp;
     pub mod gw2_wiki;
 }

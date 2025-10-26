@@ -5,6 +5,7 @@ use crate::state::cache::texture::identifier_to_filename;
 use crate::state::context::{read_context, write_context};
 use crate::state::popup::dimensions::Dimensions;
 use crate::state::popup::popup_data::{PopupData, SectionName};
+use crate::state::popup::popup_state::PopupState;
 use crate::state::popup::style::Style::{self, Bold, Normal};
 use crate::state::popup::table_params::{TableCell, TableParams, TableRow};
 use crate::state::popup::tag_params::TagParams;
@@ -12,7 +13,7 @@ use crate::state::popup::token::Token;
 use crate::state::popup::Popup;
 use ego_tree::NodeRef;
 use indexmap::IndexMap;
-use log::{debug, error, trace, warn};
+use log::{debug, error, info, trace, warn};
 use scraper::selectable::Selectable;
 use scraper::{CaseSensitivity, ElementRef, Html, Node, Selector};
 use std::fs::{self, File};
@@ -20,12 +21,6 @@ use std::io::copy;
 use std::ops::Deref;
 
 const GW2_WIKI_URL: &str = "https://wiki.guildwars2.com";
-const ITEM_ID_SPECIAL_SEARCH: &str =
-    "/wiki/Special:RunQuery/Search_by_id?title=Special%3ARunQuery%2FSearch_by_id\
-            &pfRunQueryFormName=Search+by+id&Search_by_id=id%3D45105%26context%3DItem\
-            &wpRunQuery=&pf_free_text=\
-            &Search+by+id%5Bid%5D={}\
-            &Search+by+id%5Bcontext%5D=Item&wpRunQuery=&pf_free_text=";
 
 pub fn href_to_wiki_url(href: &String) -> String {
     debug!("[href_to_wiki_url] Formatting {href}");
@@ -41,7 +36,7 @@ pub fn prepare_item_popup_with_quantity(item_name: &str, item_quantity: &usize) 
     );
     let item_name_href = format!("/wiki/{}", item_name.replace(" ", "_"));
     let mut popup =
-        prepare_popup_with_quantity(&item_name_href, item_name.to_owned(), item_quantity);
+        prepare_popup_with_item_quantity(&item_name_href, item_name.to_owned(), item_quantity);
     write_context().ui.loading_progress = Some(10);
     if let Some(cached_data) = write_context()
         .cache
@@ -100,33 +95,42 @@ pub fn download_wiki_image(href: &String) -> Result<(), ureq::Error> {
 }
 
 fn fill_using_special_search(item_name: String, popup: &mut Popup) -> Option<Popup> {
+    debug!("[fill_using_special_search]");
     let id = popup.data.item_ids.as_ref().map(|ids| ids[0]);
-    let special_search_result = special_search(id, &special_search_href(item_name, id));
-    if let Some(result) = special_search_result {
-        let redirection_href = result.0;
-        let mut context = write_context();
-        if let Some(mut cached_data) = context.cache.popup_data_map.retrieve(&redirection_href) {
-            context
-                .cache
-                .popup_data_map
-                .store(&redirection_href, &mut cached_data);
-            return Some(Popup::new(cached_data));
-        }
-        context.ui.loading_progress = Some(75);
-        popup.data.redirection_href = Some(redirection_href.clone());
-        drop(context);
-        fill_wiki_details(&redirection_href, popup);
-        write_context()
+    let Some(special_search_result) = special_search(id, &special_search_href(item_name, id))
+    else {
+        return None;
+    };
+
+    let redirection_href = special_search_result.0;
+    let mut context = write_context();
+    if let Some(mut cached_data) = context.cache.popup_data_map.retrieve(&redirection_href) {
+        context
             .cache
             .popup_data_map
-            .store(&redirection_href, &mut popup.data);
+            .store(&redirection_href, &mut cached_data);
+        return Some(Popup::new(cached_data));
     }
+    context.ui.loading_progress = Some(75);
+    popup.data.redirection_href = Some(redirection_href.clone());
+    drop(context);
+    fill_wiki_details(&redirection_href, popup);
+    write_context()
+        .cache
+        .popup_data_map
+        .store(&redirection_href, &mut popup.data);
     None
 }
 
 fn special_search_href(item_name: String, item_id: Option<u32>) -> String {
     if let Some(item_id) = item_id {
-        format!("{ITEM_ID_SPECIAL_SEARCH}{item_id}")
+        format!(
+            "/wiki/Special:RunQuery/Search_by_id?title=Special%3ARunQuery%2FSearch_by_id\
+            &pfRunQueryFormName=Search+by+id&Search_by_id=id%3D45105%26context%3DItem\
+            &wpRunQuery=&pf_free_text=\
+            &Search+by+id%5Bid%5D={item_id}\
+            &Search+by+id%5Bcontext%5D=Item&wpRunQuery=&pf_free_text={item_id}"
+        )
     } else {
         format!("/index.php?search={item_name}&title=Special%3ASearch&profile=advanced&fulltext=1&ns0=1")
     }
@@ -156,10 +160,10 @@ pub fn prepare_href_popup(href: &String, title: String) -> Popup {
 }
 
 fn prepare_popup(href: &str, title: String) -> Popup {
-    prepare_popup_with_quantity(href, title, &1)
+    prepare_popup_with_item_quantity(href, title, &1)
 }
 
-fn prepare_popup_with_quantity(href: &str, title: String, item_quantity: &usize) -> Popup {
+fn prepare_popup_with_item_quantity(href: &str, title: String, item_quantity: &usize) -> Popup {
     debug!(
         "[prepare_popup_with_quantity] Preparing popup for href: {}, title: {}",
         href, title
@@ -172,63 +176,70 @@ fn prepare_popup_with_quantity(href: &str, title: String, item_quantity: &usize)
     if let Some(item_names) = read_context().cache.item_names.value() {
         data.item_ids = item_names.get(&title).cloned();
     }
-    let mut result = Popup::new(data);
-    result.state.item_quantity = *item_quantity;
-    result
+
+    Popup {
+        data,
+        state: PopupState::new_with_quantity(*item_quantity),
+    }
 }
 
 pub fn fill_wiki_details(href: &String, popup: &mut Popup) -> bool {
-    debug!("[fill_wiki_details] Fetching details for href: {}", href);
+    debug!("[fill_wiki_details] Fetching details for href: {href}");
     let path = href_to_wiki_url(href);
-    match get_sync(path) {
-        Ok(response) => match response.into_string() {
-            Ok(text) => {
-                debug!("[fill_wiki_details] response text: {}", text);
-                let document = Html::parse_document(&text);
 
-                let exists_selector = Selector::parse(".noarticletext").unwrap();
-                if document.select(&exists_selector).next().is_some() {
-                    return false;
-                }
-                fill_item_icon(&document, popup);
-                fill_tags(&document, popup);
-                fill_description(&document, popup);
-                let section_selector = Selector::parse("h2").unwrap();
-                let sections = document.select(&section_selector);
-                for section in sections {
-                    fill_data(section, &mut popup.data.sections);
-                }
-                fill_notes(&document, popup);
-                fill_images(&document, popup);
-                true
-            }
-            Err(e) => {
-                error!("[fill_wiki_details] failed to fetch text: {}", e);
-                false
-            }
-        },
-        Err(e) => {
-            warn!("[fill_wiki_details] could not fetch data from wiki: {}", e);
-            false
-        }
+    let Ok(text) = get_sync(path)
+        .map_err(|e| format!("[fill_wiki_details] could not fetch data from wiki: {e}"))
+        .and_then(|resp| {
+            resp.into_string()
+                .map_err(|e| format!("[fill_wiki_details] failed to fetch text: {e}"))
+        })
+        .inspect_err(|e| warn!("{e}"))
+    else {
+        return false;
+    };
+
+    debug!("[fill_wiki_details] response text: {}", text);
+    let document = Html::parse_document(&text);
+
+    let exists_selector = Selector::parse(".noarticletext").unwrap();
+    if document.select(&exists_selector).next().is_some() {
+        return false;
     }
+    fill_item_icon(&document, popup);
+    fill_tags(&document, popup);
+    fill_description(&document, popup);
+    let section_selector = Selector::parse("h2").unwrap();
+    let sections = document.select(&section_selector);
+    for section in sections {
+        fill_data(section, &mut popup.data.sections);
+    }
+    fill_notes(&document, popup);
+    fill_images(&document, popup);
+    true
 }
 
 fn fill_tags(document: &Html, popup: &mut Popup) {
     debug!("[fill_tags]");
     let blockquote_selector = Selector::parse(":not(h2) + blockquote").unwrap();
-    if let Some(tag_element) = document.select(&blockquote_selector).next() {
-        let link_selector = Selector::parse("a:not(.external, .extiw)").unwrap();
-        for a_element in tag_element.select(&link_selector) {
-            if let Some(href) = a_element.value().attr("href") {
-                let href = href.split("#").next().unwrap_or("").to_string();
-                if let Some(title) = a_element.value().attr("title") {
-                    popup.data.tags.insert(href, title.to_string());
-                } else if !a_element.inner_html().is_empty() {
-                    popup.data.tags.insert(href, a_element.inner_html());
-                }
+    let link_selector = Selector::parse("a:not(.external, .extiw)").unwrap();
+
+    if let Some(blockquote) = document.select(&blockquote_selector).next() {
+        blockquote.select(&link_selector).for_each(|link| {
+            let Some(href) = link
+                .value()
+                .attr("href")
+                .and_then(|href| href.split("#").next())
+                .map(|s| s.to_string())
+            else {
+                return;
+            };
+
+            if let Some(title) = link.value().attr("title") {
+                popup.data.tags.insert(href.to_string(), title.to_string());
+            } else if !link.inner_html().is_empty() {
+                popup.data.tags.insert(href.to_string(), link.inner_html());
             }
-        }
+        })
     }
 }
 
@@ -238,25 +249,33 @@ fn skip_to_element<'a>(
 ) -> Option<NodeRef<'a, Node>> {
     while let Some(node) = next_elem {
         trace!("[skip_to_element] loop");
-        if let Some(text) = node.value().as_text() {
-            if process_text(text).is_empty() {
-                next_elem = node.next_sibling();
-                continue;
-            }
+
+        if node
+            .value()
+            .as_text()
+            .map(|t| process_text(t).is_empty())
+            .unwrap_or(false)
+        {
+            next_elem = node.next_sibling();
+            continue;
         }
-        if let Some(element) = ElementRef::wrap(node) {
-            if element.value().name() == "p"
-                && element
-                    .value()
-                    .has_class("mw-empty-elt", CaseSensitivity::CaseSensitive)
-            {
-                next_elem = node.next_sibling();
-                continue;
-            }
-            if element.value().name() == element_name {
-                return Some(node);
-            }
+
+        let Some(element) = ElementRef::wrap(node) else {
+            break;
+        };
+
+        if element.value().name() == "p"
+            && element
+                .value()
+                .has_class("mw-empty-elt", CaseSensitivity::CaseSensitive)
+        {
+            next_elem = node.next_sibling();
+            continue;
         }
+        if element.value().name() == element_name {
+            return Some(node);
+        }
+
         break;
     }
     None
@@ -382,7 +401,7 @@ fn fill_item_icon(document: &Html, popup: &mut Popup) {
 // result: href, title
 pub fn special_search(item_id: Option<u32>, href: &String) -> Option<(String, String)> {
     let path = href_to_wiki_url(href);
-    debug!("[special_search] url {href}");
+    info!("[special_search] url {href}");
     match get_sync(path) {
         Ok(response) => match response.into_string() {
             Ok(text) => {

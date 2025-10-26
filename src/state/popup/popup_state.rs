@@ -43,4 +43,11 @@ impl PopupState {
             item_quantity: 1,
         }
     }
+
+    pub fn new_with_quantity(quantity: usize) -> Self {
+        Self {
+            item_quantity: quantity,
+            ..Self::new()
+        }
+    }
 }

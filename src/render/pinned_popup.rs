@@ -80,7 +80,9 @@ impl Context {
         for action in &ui_actions {
             match action {
                 UiAction::Delete(i) => {
-                    vec.remove(*i);
+                    if vec.len() > *i {
+                        vec.remove(*i);
+                    }
                 }
                 UiAction::Refresh(i) => {
                     if let Some(t) = vec.get(*i) {

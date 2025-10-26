@@ -24,7 +24,7 @@ fn items_name_path() -> String {
     format!("{}/1/bulk/items-names.json", GW2TP_URL)
 }
 
-pub fn fetch_item_names_thread() {
+pub fn cache_item_names_thread() {
     lock_threads().push(thread::spawn(|| {
         debug!("[fetch_item_names_thread] started");
         let date = read_context().cache.item_names.date();

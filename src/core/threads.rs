@@ -1,4 +1,4 @@
-use crate::api::gw2_tp::fetch_item_names_thread;
+use crate::api::gw2_tp::cache_item_names_thread;
 use crate::state::threads::daemon::{daemon_thread, gc_thread, preloader_thread};
 
 use crate::state::context::write_context;
@@ -38,7 +38,7 @@ pub fn unload_threads() {
 }
 
 pub fn init_threads() {
-    fetch_item_names_thread();
+    cache_item_names_thread();
     daemon_thread();
     gc_thread();
     preloader_thread();

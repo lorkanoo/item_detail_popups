@@ -1,4 +1,4 @@
-use crate::api::gw2_api::fetch_prices_thread;
+use crate::api::gw2::service::cache_prices_thread;
 use crate::configuration::config::read_config;
 use crate::state::cache::cache::{is_cache_expired, StoreInCache};
 use crate::state::cache::cached_data::CachedData;
@@ -41,7 +41,7 @@ impl<'a> StoreInCache<'a, PriceCache, PriceCache, Vec<u32>> for PriceCache {
             }
         }
         if !ids_to_cache.is_empty() {
-            fetch_prices_thread(ids_to_cache);
+            cache_prices_thread(ids_to_cache);
         }
         Some(result)
     }

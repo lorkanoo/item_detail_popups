@@ -21,6 +21,7 @@ use std::{f32, ptr};
 pub mod price;
 
 const NON_CHILD_WINDOW_TEXT_WRAP_LIMIT: usize = 25;
+const ADDITIONAL_SCROLLABLE_MARGIN_RIGHT: f32 = 25.0;
 
 impl Context {
     pub fn render_popup_data(
@@ -240,11 +241,13 @@ impl Context {
                     let cursor_pos_x = ui.cursor_pos()[0];
                     Self::next_window_size_constraints(
                         [
-                            rendering_params.max_content_width - cursor_pos_x,
+                            rendering_params.max_content_width - cursor_pos_x
+                                + ADDITIONAL_SCROLLABLE_MARGIN_RIGHT,
                             rendering_params.max_content_height,
                         ],
                         [
-                            rendering_params.max_content_width - cursor_pos_x,
+                            rendering_params.max_content_width - cursor_pos_x
+                                + ADDITIONAL_SCROLLABLE_MARGIN_RIGHT,
                             rendering_params.max_content_height,
                         ],
                     );
@@ -422,6 +425,11 @@ impl Context {
                     let _ = write_context().clipboard.set_text(name.as_str());
                 }));
             }
+            if MenuItem::new(format!("Close all##idp{}", popup.state.id)).build(ui) {
+                lock_threads().push(thread::spawn(move || {
+                    write_context().ui.close_all_popups();
+                }));
+            }
         });
         ui.same_line();
         Self::render_prices(ui, &item_ids, cache, rendering_params, item_quantity);
@@ -470,5 +478,10 @@ fn render_close_button(
         && ui.close_button(format!("##idp_close{}", popup_state.id), &window_width)
     {
         popup_state.opened = false
+    }
+    if ui.is_item_clicked_with_button(MouseButton::Right) {
+        lock_threads().push(thread::spawn(move || {
+            write_context().ui.close_all_popups();
+        }));
     }
 }
