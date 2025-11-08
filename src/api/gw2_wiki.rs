@@ -555,16 +555,6 @@ fn parse_element_node(
 }
 
 fn parse_table(element: &ElementRef, result: &mut Vec<Token>) {
-    if let Some(class) = element.value().attr("class") {
-        if class.contains("mech1") {
-            result.push(Token::Text(
-                "Open wiki to see the table".to_string(),
-                Style::Disabled,
-            ));
-            return;
-        }
-    }
-
     let mut table_params = TableParams::new();
     table_params.headers = parse_table_headers(element);
     table_params.rows = parse_table_rows(element);
@@ -613,7 +603,7 @@ fn parse_table_cell(cell: &ElementRef) -> TableCell {
 fn parse_table_headers(element: &ElementRef) -> Vec<String> {
     let mut table_headers = vec![];
 
-    let header_selector = Selector::parse("th").unwrap();
+    let header_selector = Selector::parse("tbody > tr:first-child > th").unwrap();
     let headers = element.select(&header_selector);
     for header in headers {
         table_headers.push(header.text().collect::<Vec<_>>().join(" "));

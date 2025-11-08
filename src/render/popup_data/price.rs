@@ -42,7 +42,6 @@ impl Context {
         item_quantity: usize,
     ) {
         let Some(item_ids) = item_ids else { return };
-
         let Some(prices) = cache.prices.retrieve(item_ids.clone()) else {
             return;
         };

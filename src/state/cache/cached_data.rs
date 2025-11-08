@@ -12,21 +12,21 @@ pub struct CachedData<T> {
 impl<T> CachedData<T> {
     pub fn new(date: DateTime<Local>) -> Self {
         Self {
-            caching_status: CachingStatus::InProgress,
+            caching_status: CachingStatus::Caching,
             date,
             value: None,
         }
     }
     pub fn new_with_value(date: DateTime<Local>, value: T) -> Self {
         Self {
-            caching_status: CachingStatus::InProgress,
+            caching_status: CachingStatus::Caching,
             date,
             value: Some(value),
         }
     }
 
     pub fn value(&self) -> Option<&T> {
-        if matches!(self.caching_status, CachingStatus::Cached) {
+        if matches!(self.caching_status, CachingStatus::Cached | CachingStatus::Refreshing) {
             return self.value.as_ref();
         }
         None

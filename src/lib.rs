@@ -1,5 +1,5 @@
 mod render;
-
+mod service;
 pub mod configuration {
     pub mod config;
     pub mod popup {
@@ -24,6 +24,7 @@ pub mod state {
         pub mod item_name;
         pub mod price;
         pub mod texture;
+        pub mod gw2_tp;
     }
     pub mod clipboard;
     pub mod context;
@@ -35,14 +36,7 @@ pub mod state {
     pub mod ui_context;
 }
 
-mod api {
-    pub mod gw2 {
-        pub mod response;
-        pub mod service;
-    }
-    pub mod gw2_tp;
-    pub mod gw2_wiki;
-}
+mod api;
 
 pub mod core {
     pub mod addon;

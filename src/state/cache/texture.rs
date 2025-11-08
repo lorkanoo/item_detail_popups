@@ -30,7 +30,7 @@ impl<'a> StoreInCache<'a, TextureCache, CachedData<Texture>, String> for Texture
                 if is_cache_expired(cache_expiration_duration, texture_cached_data.date)
                     && !matches!(
                         &texture_cached_data.caching_status,
-                        CachingStatus::InProgress
+                        CachingStatus::Caching
                     )
                 {
                     result = CachedData::new(Local::now());

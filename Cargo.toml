@@ -1,6 +1,6 @@
 [package]
 name = "item_detail_popups"
-version = "2.1.0"
+version = "2.1.1"
 authors = ["lorkanoo"]
 edition = "2021"
 description = "Contextual popup with item details for hovered items"
