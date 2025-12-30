@@ -6,7 +6,7 @@ use crate::state::font::Font;
 use log::{debug, error, info};
 use nexus::font::{add_font_from_file, RawFontReceive};
 use nexus::font_receive;
-use nexus::imgui::sys::{self, ImFontConfig};
+use nexus::imgui::sys;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
@@ -44,21 +44,18 @@ pub fn load_fonts() {
         }
         if let (Some(extension), Some(filestem)) = (path.extension(), path.file_stem()) {
             if extension == "ttf" {
-                // #[cfg(not(debug_assertions))] {
                 let font_receive: RawFontReceive = font_receive!(|id, _font| {
                     debug!("Font loaded: {id}");
                 });
-                let config: &mut ImFontConfig = unsafe { &mut *std::ptr::null_mut() };
                 let filename = filestem.to_string_lossy();
                 add_font_from_file(
                     format!("IDP_{filename}"),
                     path,
                     font_size,
-                    config,
+                    None,
                     font_receive,
                 )
                 .revert_on_unload();
-                // }
 
                 loaded_count += 1;
             }
