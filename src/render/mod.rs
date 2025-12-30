@@ -1,15 +1,15 @@
+use crate::addon::PACKAGE_NAME;
 use crate::state::context::Context;
 use log::debug;
 use nexus::imgui::Ui;
-use crate::addon::PACKAGE_NAME;
 
 mod hovered_popup;
 mod options;
 mod pinned_popup;
 pub mod popup_data;
+mod search;
 pub mod token;
 pub mod ui;
-mod search;
 
 impl Context {
     pub fn render(&mut self, ui: &Ui) {

@@ -5,10 +5,10 @@ mod help;
 pub mod r#macro;
 mod style;
 
+use crate::addon::PACKAGE_NAME;
 use crate::state::context::Context;
 use log::debug;
 use nexus::imgui::Ui;
-use crate::addon::PACKAGE_NAME;
 
 impl Context {
     pub fn render_options(&mut self, ui: &Ui) {

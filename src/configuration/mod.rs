@@ -6,23 +6,23 @@ pub mod notification_params;
 pub(crate) mod search;
 
 use crate::addon::PACKAGE_VERSION;
-use crate::state::cache::Persist;
-use std::fs;
-use std::thread;
 use crate::configuration::keyboard_layout::KeyboardLayout;
 use crate::configuration::notification_params::NotificationParams;
 use crate::configuration::popup::rendering_params::RenderingParams;
+use crate::state::cache::Persist;
 use crate::state::context::write_context;
 use crate::utils::serde::{no, yes};
 use log::{info, trace, warn};
 use nexus::paths::get_addon_dir;
+use search::search_params::SearchParams;
 use serde::{Deserialize, Serialize};
+use std::fs;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
 use std::path::PathBuf;
 use std::sync::{OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::thread;
 use std::time::Duration;
-use search::search_params::SearchParams;
 
 pub const GW2_API_KEY: &str = "GW2_API_KEY";
 pub const DEFAULT_POST_KEY_COMBINATION_DELAY_MS: u64 = 50;
@@ -36,7 +36,6 @@ pub(crate) static CONFIG: OnceLock<RwLock<Config>> = OnceLock::new();
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
-
     #[serde(default = "default_version")]
     pub version: String,
 

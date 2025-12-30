@@ -126,8 +126,11 @@ impl Context {
             ui.text("Add to blacklist:");
             ui.same_line();
             ui.text_disabled("(press enter to confirm)");
-            ui.input_text("##add_to_blacklist_idp", &mut self.ui.tab_to_blacklist_input)
-                .build();
+            ui.input_text(
+                "##add_to_blacklist_idp",
+                &mut self.ui.tab_to_blacklist_input,
+            )
+            .build();
             if ui.is_key_released(Key::Enter) && ui.is_item_focused() {
                 let tab = self.ui.tab_to_blacklist_input.to_lowercase();
                 if !blacklisted_tabs.contains(&tab) && !self.ui.tab_to_blacklist_input.is_empty() {

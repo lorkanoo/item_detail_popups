@@ -1,12 +1,12 @@
 use crate::service::http_client::get_sync;
 
-use crate::api::gw2::GW2_API_URL;
 use crate::api::api_error::ApiError;
+use crate::api::gw2::GW2_API_URL;
 use log::debug;
 use price_api_response::PriceApiResponse;
 
-pub mod price_api_response;
 mod buy_price;
+pub mod price_api_response;
 mod sell_price;
 
 pub fn get_prices(item_ids: &Vec<u32>) -> Result<Vec<PriceApiResponse>, ApiError> {

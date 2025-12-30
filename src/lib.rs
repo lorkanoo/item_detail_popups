@@ -1,11 +1,11 @@
+pub mod addon;
+mod api;
 pub mod configuration;
+mod render;
 pub mod service;
 pub mod state;
-pub mod addon;
 pub mod threads;
 pub mod utils;
-mod api;
-mod render;
 
 use addon::load;
 use addon::unload;

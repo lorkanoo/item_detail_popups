@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::configuration::search::search_history::SearchHistory;
+use serde::{Deserialize, Serialize};
 
 pub const DEFAULT_SEARCH_HISTORY_SIZE: usize = 100;
 

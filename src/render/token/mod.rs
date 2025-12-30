@@ -1,8 +1,8 @@
-mod text;
-mod tag;
-mod list;
 mod image;
+mod list;
 mod table;
+mod tag;
+mod text;
 
 use crate::configuration::popup::rendering_params::RenderingParams;
 use crate::render::ui::UiAction;
@@ -11,8 +11,8 @@ use crate::state::context::Context;
 use crate::state::font::Font;
 use crate::state::popup::token::Token;
 use log::debug;
-use nexus::imgui::Ui;
 use nexus::imgui::StyleVar::ItemSpacing;
+use nexus::imgui::Ui;
 
 const INDENT: &str = "    ";
 

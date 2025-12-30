@@ -1,15 +1,5 @@
 use crate::configuration::{read_config, write_config};
 use crate::state::context::write_context;
-use crate::state::popup::Popup;
-use crate::threads::lock_threads;
-use nexus::alert::send_alert;
-use std::thread;
-use scraper::{CaseSensitivity, ElementRef, Html, Node, Selector};
-use log::{debug, trace};
-use ego_tree::NodeRef;
-use indexmap::IndexMap;
-use scraper::selectable::Selectable;
-use std::ops::Deref;
 use crate::state::popup::dimensions::Dimensions;
 use crate::state::popup::popup_data::SectionName;
 use crate::state::popup::style::Style;
@@ -17,6 +7,16 @@ use crate::state::popup::style::Style::{Bold, Normal};
 use crate::state::popup::table_params::{TableCell, TableParams, TableRow};
 use crate::state::popup::tag_params::TagParams;
 use crate::state::popup::token::Token;
+use crate::state::popup::Popup;
+use crate::threads::lock_threads;
+use ego_tree::NodeRef;
+use indexmap::IndexMap;
+use log::{debug, trace};
+use nexus::alert::send_alert;
+use scraper::selectable::Selectable;
+use scraper::{CaseSensitivity, ElementRef, Html, Node, Selector};
+use std::ops::Deref;
+use std::thread;
 
 pub fn copy_popup_title(popup: &Popup) {
     let name = popup.data.title.clone();

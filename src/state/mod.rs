@@ -6,6 +6,6 @@ pub mod keybinds;
 pub mod links;
 pub mod mumble;
 pub mod popup;
+pub mod search;
 pub mod threads;
 pub mod ui_context;
-pub mod search;

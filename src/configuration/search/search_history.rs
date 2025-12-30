@@ -1,6 +1,6 @@
-use std::collections::VecDeque;
-use serde::{Deserialize, Serialize};
 use crate::configuration::search::normalize::Normalize;
+use serde::{Deserialize, Serialize};
+use std::collections::VecDeque;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchHistory<T: PartialEq + Normalize<T>> {
@@ -10,7 +10,10 @@ pub struct SearchHistory<T: PartialEq + Normalize<T>> {
 
 impl<T: PartialEq + Normalize<T>> SearchHistory<T> {
     pub fn new(max_size: usize) -> Self {
-        Self { data: VecDeque::new(), max_size }
+        Self {
+            data: VecDeque::new(),
+            max_size,
+        }
     }
 
     pub fn push(&mut self, item: T) {
@@ -33,7 +36,10 @@ impl<T: PartialEq + Normalize<T>> SearchHistory<T> {
 impl SearchHistory<String> {
     pub fn find_containing(&self, needle: &str, max_results: usize) -> Vec<&String> {
         let normalized = needle.to_string().normalize();
-        self.data.iter().filter(|x| x.contains(normalized.as_str())).take(max_results).collect()
+        self.data
+            .iter()
+            .filter(|x| x.contains(normalized.as_str()))
+            .take(max_results)
+            .collect()
     }
 }
-

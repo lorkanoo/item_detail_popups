@@ -7,11 +7,11 @@ use crate::state::context::{read_context, save_cache, write_context};
 use crate::state::threads::cache::clean_expired_cache;
 use crate::state::threads::font::{load_fonts, preselect_fonts};
 use crate::threads::lock_threads;
-use log::error;
+use chrono::Local;
 use log::debug;
+use log::error;
 use std::time::Duration;
 use std::{fs, thread};
-use chrono::Local;
 
 const DAEMON_THREAD_SLEEP_DURATION_MS: u64 = 50;
 const GC_INTERVAL_SEC: u64 = 120;
@@ -26,12 +26,15 @@ pub fn daemon_thread() {
         clean_finished_threads();
 
         let now = Local::now();
-        if now > read_context().last_config_save_date + Duration::from_secs(CONFIG_SAVE_INTERVAL_SEC) {
+        if now
+            > read_context().last_config_save_date + Duration::from_secs(CONFIG_SAVE_INTERVAL_SEC)
+        {
             read_config().save();
             write_context().last_config_save_date = now;
         }
 
-        if now > read_context().last_cache_save_date + Duration::from_secs(CACHE_SAVE_INTERVAL_SEC) {
+        if now > read_context().last_cache_save_date + Duration::from_secs(CACHE_SAVE_INTERVAL_SEC)
+        {
             save_cache();
             write_context().last_cache_save_date = now;
         }

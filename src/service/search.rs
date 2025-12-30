@@ -1,10 +1,12 @@
-use crate::api::gw2_wiki::{extract_search_results, get_wiki_article, get_wiki_special_search, special_search_href};
-use crate::service::popup::fill_popup_with_wiki_details;
-use crate::state::popup::Popup;
-use crate::state::search::search_result::SearchResult;
+use crate::api::gw2_wiki::{
+    extract_search_results, get_wiki_article, get_wiki_special_search, special_search_href,
+};
 use crate::configuration::search::normalize::Normalize;
+use crate::service::popup::fill_popup_with_wiki_details;
 use crate::state::cache::StoreInCache;
 use crate::state::context::write_context;
+use crate::state::popup::Popup;
+use crate::state::search::search_result::SearchResult;
 
 pub fn search_wiki(query: &str) -> SearchResult {
     let query_normalized = query.to_string().normalize();
@@ -17,7 +19,7 @@ pub fn search_wiki(query: &str) -> SearchResult {
         .retrieve(&item_name_href)
     {
         popup.data = cached_data;
-        return SearchResult::SingleMatch(popup)
+        return SearchResult::SingleMatch(popup);
     }
 
     if let Some(document) = get_wiki_article(&item_name_href) {
@@ -29,7 +31,8 @@ pub fn search_wiki(query: &str) -> SearchResult {
         SearchResult::SingleMatch(popup)
     } else {
         let mut matching_search_entries = vec![];
-        if let Some(document) = get_wiki_special_search(&special_search_href(item_name_href, None)) {
+        if let Some(document) = get_wiki_special_search(&special_search_href(item_name_href, None))
+        {
             matching_search_entries = extract_search_results(&document, None);
         }
         SearchResult::MultipleMatches(matching_search_entries)

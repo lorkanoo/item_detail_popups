@@ -1,17 +1,17 @@
 use crate::configuration::textures_dir;
 use crate::service::http_client::get_sync;
+use crate::service::popup;
+use crate::service::popup::fill_popup_with_wiki_details;
 use crate::state::cache::texture::identifier_to_filename;
 use crate::state::cache::StoreInCache;
 use crate::state::context::write_context;
 use crate::state::popup::Popup;
+use crate::state::search::matching_entry::MatchingSearchEntry;
 use log::{debug, error, info, warn};
 use scraper::selectable::Selectable;
 use scraper::{ElementRef, Html, Selector};
 use std::fs::{self, File};
 use std::io::copy;
-use crate::service::popup;
-use crate::service::popup::fill_popup_with_wiki_details;
-use crate::state::search::matching_entry::MatchingSearchEntry;
 
 const GW2_WIKI_URL: &str = "https://wiki.guildwars2.com";
 
@@ -87,9 +87,13 @@ pub fn download_wiki_image(href: &String) -> Result<(), ureq::Error> {
 fn fill_using_special_search(item_name: String, popup: &mut Popup) -> Option<Popup> {
     debug!("[fill_using_special_search]");
     let id = popup.data.item_ids.as_ref().map(|ids| ids[0]);
-    let Some(document) = get_wiki_special_search(&special_search_href(item_name, id)) else { return None };
+    let Some(document) = get_wiki_special_search(&special_search_href(item_name, id)) else {
+        return None;
+    };
     let matching_search_entries = extract_search_results(&document, id);
-    let Some(search_entry) = matching_search_entries.first() else { return None };
+    let Some(search_entry) = matching_search_entries.first() else {
+        return None;
+    };
     let mut context = write_context();
     if let Some(mut cached_data) = context.cache.popup_data_map.retrieve(&search_entry.href) {
         context
@@ -184,9 +188,7 @@ pub fn get_wiki_special_search(href: &String) -> Option<Html> {
     info!("[special_search] url {href}");
     match get_sync(path) {
         Ok(response) => match response.into_string() {
-            Ok(text) => {
-                Some(Html::parse_document(&text))
-            }
+            Ok(text) => Some(Html::parse_document(&text)),
             Err(e) => {
                 error!("[special_search] failed to fetch text: {}", e);
                 None
@@ -204,13 +206,13 @@ pub fn extract_search_results(document: &Html, item_id: Option<u32>) -> Vec<Matc
     if let Some(item_id) = item_id {
         let selector = format!(r#"td[data-sort-value="{}"]"#, item_id);
         let item_selector = Selector::parse(selector.as_str()).unwrap();
-        let mut item_iterator = document.select(&item_selector);
+        let item_iterator = document.select(&item_selector);
         for tag_element in item_iterator {
             if let Some(element) = tag_element.parent().and_then(ElementRef::wrap) {
                 let link_selector = Selector::parse("a").unwrap();
                 if let Some(link_element) = element.select(&link_selector).next() {
                     let text = extract_title(link_element);
-                    let href =  extract_href(link_element);
+                    let href = extract_href(link_element);
                     matching_search_entries.push(MatchingSearchEntry::new(text, href));
                 }
             }
@@ -218,7 +220,7 @@ pub fn extract_search_results(document: &Html, item_id: Option<u32>) -> Vec<Matc
     } else {
         let selector = r#".mw-search-result-heading > a"#.to_string();
         let item_selector = Selector::parse(selector.as_str()).unwrap();
-        let mut item_iterator = document.select(&item_selector);
+        let item_iterator = document.select(&item_selector);
         for link_element in item_iterator {
             let text = extract_title(link_element);
             let href = extract_href(link_element);
@@ -229,7 +231,11 @@ pub fn extract_search_results(document: &Html, item_id: Option<u32>) -> Vec<Matc
 }
 
 fn extract_title(link_element: ElementRef) -> String {
-    link_element.value().attr("title").map(|v| v.to_string()).unwrap_or("".to_string())
+    link_element
+        .value()
+        .attr("title")
+        .map(|v| v.to_string())
+        .unwrap_or("".to_string())
 }
 
 fn extract_href(element: ElementRef) -> String {

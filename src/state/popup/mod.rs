@@ -1,6 +1,6 @@
+use crate::state::context::read_context;
 use popup_data::PopupData;
 use popup_state::PopupState;
-use crate::state::context::read_context;
 
 pub mod dimensions;
 pub mod popup_data;

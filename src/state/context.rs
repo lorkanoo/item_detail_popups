@@ -3,10 +3,10 @@ use crate::state::cache::Persist;
 use crate::state::clipboard::CustomClipboard;
 use crate::state::links::Links;
 use crate::state::ui_context::UiContext;
+use chrono::{DateTime, Local};
 use log::trace;
 use std::sync::{OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::thread;
-use chrono::{DateTime, Local};
 
 pub(crate) static CONTEXT: OnceLock<RwLock<Context>> = OnceLock::new();
 
@@ -20,7 +20,7 @@ pub struct Context {
     pub cache: Cache,
     pub last_config_save_date: DateTime<Local>,
     pub last_cache_save_date: DateTime<Local>,
-    pub last_gc_date: DateTime<Local>
+    pub last_gc_date: DateTime<Local>,
 }
 
 impl Default for Context {
@@ -34,7 +34,7 @@ impl Default for Context {
             cache: Cache::default(),
             last_config_save_date: Local::now(),
             last_cache_save_date: Local::now(),
-            last_gc_date: Local::now()
+            last_gc_date: Local::now(),
         }
     }
 }

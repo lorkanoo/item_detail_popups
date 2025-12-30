@@ -1,4 +1,5 @@
 use crate::api::gw2::price::get_prices;
+use crate::api::gw2::price::price_api_response::PriceApiResponse;
 use crate::configuration::read_config;
 use crate::state::cache::cached_data::CachedData;
 use crate::state::cache::caching_status::CachingStatus;
@@ -11,7 +12,6 @@ use log::debug;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::thread;
-use crate::api::gw2::price::price_api_response::PriceApiResponse;
 
 #[derive(Clone, Serialize, Deserialize, Debug, Default)]
 pub struct Price {

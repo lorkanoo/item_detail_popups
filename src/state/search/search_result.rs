@@ -6,4 +6,3 @@ pub enum SearchResult {
     SingleMatch(Popup),
     MultipleMatches(Vec<MatchingSearchEntry>),
 }
-

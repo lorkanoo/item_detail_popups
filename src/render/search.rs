@@ -31,8 +31,7 @@ impl Context {
             ui.input_text("##search_input_idp", &mut self.ui.search_popup_input)
                 .build();
             ui.same_line();
-            let mut should_search = ui.button("Search")
-                && !self.ui.search_popup_input.is_empty();
+            let mut should_search = ui.button("Search") && !self.ui.search_popup_input.is_empty();
 
             if !self.ui.search_popup_input.is_empty() {
                 let needle = self.ui.search_popup_input.as_str();
@@ -40,7 +39,8 @@ impl Context {
                 for entry in read_config()
                     .search_params
                     .search_history
-                    .find_containing(needle, MAX_SEARCH_RESULTS) {
+                    .find_containing(needle, MAX_SEARCH_RESULTS)
+                {
                     ui.text_colored(link_color, entry);
                     if ui.is_item_clicked() {
                         self.ui.search_popup_input = entry.clone();
@@ -50,7 +50,10 @@ impl Context {
             }
 
             if ui.is_key_released(Key::Enter) || should_search {
-                write_config().search_params.search_history.push(self.ui.search_popup_input.clone());
+                write_config()
+                    .search_params
+                    .search_history
+                    .push(self.ui.search_popup_input.clone());
                 ui.close_current_popup();
                 lock_threads().push(thread::spawn(move || {
                     write_context().ui.loading_progress = Some(1);
@@ -65,14 +68,15 @@ impl Context {
     }
 
     pub fn render_search_result(&mut self, ui: &Ui) {
-
-        let Some(search_result) = &self.ui.search_result else { return };
+        let Some(search_result) = &self.ui.search_result else {
+            return;
+        };
 
         match search_result {
             SingleMatch(popup) => {
                 self.ui.hovered_popup = Some(popup.clone());
                 self.ui.search_result = None;
-            },
+            }
             MultipleMatches(matches) => {
                 if self.ui.should_open_search_result {
                     ui.set_next_window_pos(self.ui.search_position);
@@ -92,7 +96,10 @@ impl Context {
                         if ui.is_item_clicked() {
                             ui.close_current_popup();
                             open_link_thread(entry.href.clone(), entry.text.clone());
-                            write_config().search_params.search_history.push(entry.text.clone());
+                            write_config()
+                                .search_params
+                                .search_history
+                                .push(entry.text.clone());
                         }
                     }
                 });
