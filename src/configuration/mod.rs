@@ -1,11 +1,19 @@
-use crate::core::addon::VERSION;
-use crate::state::cache::cache::Persist;
-use std::{fs, thread};
+pub mod popup {
+    pub mod rendering_params;
+}
+pub mod keyboard_layout;
+pub mod notification_params;
+pub(crate) mod search;
 
+use crate::addon::PACKAGE_VERSION;
+use crate::state::cache::Persist;
+use std::fs;
+use std::thread;
 use crate::configuration::keyboard_layout::KeyboardLayout;
+use crate::configuration::notification_params::NotificationParams;
 use crate::configuration::popup::rendering_params::RenderingParams;
-use crate::core::utils::serde::{no, yes};
 use crate::state::context::write_context;
+use crate::utils::serde::{no, yes};
 use log::{info, trace, warn};
 use nexus::paths::get_addon_dir;
 use serde::{Deserialize, Serialize};
@@ -14,7 +22,9 @@ use std::io::{BufReader, BufWriter};
 use std::path::PathBuf;
 use std::sync::{OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::time::Duration;
+use search::search_params::SearchParams;
 
+pub const GW2_API_KEY: &str = "GW2_API_KEY";
 pub const DEFAULT_POST_KEY_COMBINATION_DELAY_MS: u64 = 50;
 const DEFAULT_POPUP_DATA_CACHE_EXPIRATION_SECS: u64 = 36 * 3600;
 const DEFAULT_MAX_POPUP_DATA_CACHE_ELEMENTS: usize = 300;
@@ -26,33 +36,49 @@ pub(crate) static CONFIG: OnceLock<RwLock<Config>> = OnceLock::new();
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
+
     #[serde(default = "default_version")]
     pub version: String,
+
     pub max_popup_data_elements: usize,
     pub max_popup_data_expiration_duration: Duration,
     pub max_texture_expiration_duration: Duration,
+
     #[serde(default = "default_price_expiration")]
     pub max_price_expiration_duration: Duration,
+
     #[serde(default = "default_bold_font_name")]
     pub selected_bold_font_name: Option<String>,
+
     #[serde(default = "yes")]
     pub wait_until_all_keys_released: bool,
+
     #[serde(default = "no")]
     pub use_left_shift: bool,
+
     #[serde(default = "default_post_key_combination_delay_ms")]
     pub post_key_combination_delay_ms: u64,
+
     #[serde(default = "yes")]
     pub close_on_mouse_away: bool,
+
     #[serde(default = "RenderingParams::default")]
     pub rendering_params: RenderingParams,
+
     #[serde(default = "KeyboardLayout::default")]
     pub keyboard_layout: KeyboardLayout,
+
+    #[serde(default = "NotificationParams::default")]
+    pub notification_params: NotificationParams,
+
+    #[serde(default = "SearchParams::default")]
+    pub search_params: SearchParams,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            version: VERSION.to_string(),
+            version: PACKAGE_VERSION.to_string(),
             max_popup_data_elements: DEFAULT_MAX_POPUP_DATA_CACHE_ELEMENTS,
             max_popup_data_expiration_duration: Duration::from_secs(
                 DEFAULT_POPUP_DATA_CACHE_EXPIRATION_SECS,
@@ -62,10 +88,12 @@ impl Default for Config {
             selected_bold_font_name: default_bold_font_name(),
             wait_until_all_keys_released: yes(),
             use_left_shift: no(),
-            post_key_combination_delay_ms: 50,
+            post_key_combination_delay_ms: DEFAULT_POST_KEY_COMBINATION_DELAY_MS,
             close_on_mouse_away: yes(),
             rendering_params: RenderingParams::default(),
             keyboard_layout: KeyboardLayout::default(),
+            notification_params: NotificationParams::default(),
+            search_params: SearchParams::default(),
         }
     }
 }
@@ -91,13 +119,11 @@ impl Persist for Config {
     }
 
     fn save(&self) {
-        info!("[save] Saving configuration..");
         let path = Config::file_path();
         match File::create(&path) {
             Ok(file) => {
                 let writer = BufWriter::new(file);
                 serde_json::to_writer_pretty(writer, self).expect("failed to serialize config");
-                info!("[save] Saved config to \"{}\"", path.display())
             }
             Err(err) => log::error!("Failed to save config: {err}"),
         }
@@ -161,12 +187,12 @@ pub fn textures_dir() -> PathBuf {
 
 pub fn fonts_dir() -> PathBuf {
     let mut result = get_addon_dir("item_detail_popups").expect("invalid fonts directory");
-    result.push("../../fonts");
+    result.push("..\\..\\fonts");
     result
 }
 
 fn default_version() -> String {
-    VERSION.to_string()
+    PACKAGE_VERSION.to_string()
 }
 
 fn default_price_expiration() -> Duration {

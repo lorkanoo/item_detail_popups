@@ -1,11 +1,10 @@
-use crate::api::gw2_wiki::{href_to_wiki_url, process_text};
-use crate::configuration::config::read_config;
+use crate::api::gw2_wiki::href_to_wiki_url;
 use crate::configuration::popup::rendering_params::RenderingParams;
-use crate::core::threads::lock_threads;
-use crate::core::utils::ui::{UiAction, UiExtended, UiLink};
-use crate::state::cache::cache::{Cache, StoreInCache};
+use crate::configuration::read_config;
+use crate::render::ui::{UiAction, UiExtended, UiLink};
+use crate::service::popup::{close_all_popups, copy_popup_title, process_text};
 use crate::state::cache::caching_status::CachingStatus;
-use crate::state::context::write_context;
+use crate::state::cache::{Cache, StoreInCache};
 use crate::state::context::Context;
 use crate::state::font::Font;
 use crate::state::popup::popup_state::PopupState;
@@ -15,18 +14,17 @@ use log::{debug, error};
 use nexus::imgui::MenuItem;
 use nexus::imgui::{sys, TabBarFlags};
 use nexus::imgui::{ChildWindow, MouseButton, Ui};
-use std::thread;
 use std::{f32, ptr};
 
 pub mod price;
 
 const NON_CHILD_WINDOW_TEXT_WRAP_LIMIT: usize = 25;
-const ADDITIONAL_SCROLLABLE_MARGIN_RIGHT: f32 = 25.0;
+const ADDITIONAL_SCROLLABLE_MARGIN_RIGHT: f32 = 45.0;
 
 impl Context {
     pub fn render_popup_data(
         ui: &Ui,
-        pinned_popup_vec_index: Option<usize>,
+        pinned_popup_index: Option<usize>,
         popup: &mut Popup,
         ui_actions: &mut Vec<UiAction>,
         cache: &mut Cache,
@@ -38,14 +36,14 @@ impl Context {
         if !popup.state.collapsed {
             Self::render_popup_content(
                 ui,
-                pinned_popup_vec_index,
+                pinned_popup_index,
                 popup,
                 ui_actions,
                 cache,
                 bold_font,
                 &rendering_params,
             );
-            render_close_button(ui, pinned_popup_vec_index, &mut popup.state);
+            render_close_button(ui, pinned_popup_index, &mut popup.state);
         }
         let window_width = ui.window_size()[0];
         popup.state.width = Some(window_width);
@@ -101,6 +99,9 @@ impl Context {
             ui.text_or_disabled(&processed_title, &popup.state.collapsed);
             ui.new_line();
         }
+        if ui.is_item_clicked_with_button(MouseButton::Right) {
+            copy_popup_title(popup);
+        }
 
         if ui.is_item_hovered() {
             if ui.is_mouse_dragging(MouseButton::Left) {
@@ -120,7 +121,7 @@ impl Context {
 
     fn render_popup_content(
         ui: &Ui<'_>,
-        pinned_popup_vec_index: Option<usize>,
+        pinned_popup_index: Option<usize>,
         popup: &mut Popup,
         ui_actions: &mut Vec<UiAction>,
         cache: &mut Cache,
@@ -139,7 +140,7 @@ impl Context {
                 Self::render_tab(
                     "General",
                     ui,
-                    pinned_popup_vec_index,
+                    pinned_popup_index,
                     ui_actions,
                     cache,
                     bold_font,
@@ -161,7 +162,7 @@ impl Context {
                     Self::render_tab(
                         section_name,
                         ui,
-                        pinned_popup_vec_index,
+                        pinned_popup_index,
                         ui_actions,
                         cache,
                         bold_font,
@@ -176,7 +177,7 @@ impl Context {
 
                 Self::render_images_tab(
                     ui,
-                    pinned_popup_vec_index,
+                    pinned_popup_index,
                     popup,
                     ui_actions,
                     cache,
@@ -186,7 +187,7 @@ impl Context {
         }
         Self::render_ribbon(
             ui,
-            pinned_popup_vec_index,
+            pinned_popup_index,
             popup,
             ui_actions,
             rendering_params,
@@ -199,7 +200,7 @@ impl Context {
     fn render_tab(
         tab_name: &str,
         ui: &Ui<'_>,
-        pinned_popup_vec_index: Option<usize>,
+        pinned_popup_index: Option<usize>,
         ui_actions: &mut Vec<UiAction>,
         cache: &mut Cache,
         bold_font: &Option<Font>,
@@ -214,7 +215,7 @@ impl Context {
         if should_render && (!tokens.is_empty() || (general_tab && item_ids.is_some())) {
             let token = ui.tab_item(format!("{tab_name}##idp{}", popup_state.id));
             if ui.is_item_hovered()
-                && pinned_popup_vec_index.is_none()
+                && pinned_popup_index.is_none()
                 && rendering_params.auto_pin_on_tab_hover
             {
                 Self::pin_popup(ui, popup_state, ui_actions);
@@ -267,7 +268,7 @@ impl Context {
 
     fn render_images_tab(
         ui: &Ui<'_>,
-        pinned_popup_vec_index: Option<usize>,
+        pinned_popup_index: Option<usize>,
         popup: &mut Popup,
         ui_actions: &mut Vec<UiAction>,
         cache: &mut Cache,
@@ -278,7 +279,7 @@ impl Context {
         }
         let token = ui.tab_item(format!("Images##idp{}", popup.state.id));
         if ui.is_item_hovered()
-            && pinned_popup_vec_index.is_none()
+            && pinned_popup_index.is_none()
             && rendering_params.auto_pin_on_tab_hover
         {
             Self::pin_popup(ui, &mut popup.state, ui_actions);
@@ -379,7 +380,7 @@ impl Context {
 
     fn render_ribbon(
         ui: &Ui<'_>,
-        pinned_popup_vec_index: Option<usize>,
+        pinned_popup_index: Option<usize>,
         popup: &mut Popup,
         ui_actions: &mut Vec<UiAction>,
         rendering_params: &RenderingParams,
@@ -409,7 +410,7 @@ impl Context {
         ui.popup(format!("##Popup_idp{}", popup.state.id), || {
             if MenuItem::new(format!("Refresh##idp{}", popup.state.id)).build(ui) {
                 popup.state.pos = Some(ui.window_pos());
-                if let Some(index) = pinned_popup_vec_index {
+                if let Some(index) = pinned_popup_index {
                     ui_actions.push(UiAction::Refresh(index));
                 }
             }
@@ -420,15 +421,10 @@ impl Context {
                 });
             }
             if MenuItem::new(format!("Copy name##idp{}", popup.state.id)).build(ui) {
-                let name = popup.data.title.clone();
-                lock_threads().push(thread::spawn(move || {
-                    let _ = write_context().clipboard.set_text(name.as_str());
-                }));
+                copy_popup_title(popup)
             }
             if MenuItem::new(format!("Close all##idp{}", popup.state.id)).build(ui) {
-                lock_threads().push(thread::spawn(move || {
-                    write_context().ui.close_all_popups();
-                }));
+                close_all_popups();
             }
         });
         ui.same_line();
@@ -468,20 +464,18 @@ impl Context {
 
 fn render_close_button(
     ui: &Ui<'_>,
-    pinned_popup_vec_index: Option<usize>,
+    pinned_popup_index: Option<usize>,
     popup_state: &mut PopupState,
 ) {
     let window_width = ui.window_size()[0];
     let is_resizing = window_width != popup_state.width.unwrap_or(window_width);
-    if pinned_popup_vec_index.is_some()
+    if pinned_popup_index.is_some()
         && !is_resizing
         && ui.close_button(format!("##idp_close{}", popup_state.id), &window_width)
     {
         popup_state.opened = false
     }
     if ui.is_item_clicked_with_button(MouseButton::Right) {
-        lock_threads().push(thread::spawn(move || {
-            write_context().ui.close_all_popups();
-        }));
+        close_all_popups();
     }
 }

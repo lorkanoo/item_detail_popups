@@ -5,8 +5,8 @@ use enigo::{
     Enigo, Key, Keyboard, Mouse, Settings,
 };
 
-use crate::configuration::config::read_config;
 use crate::configuration::keyboard_layout::KeyboardLayout;
+use crate::configuration::read_config;
 use crate::state::context::read_context;
 use log::{debug, error};
 use std::thread;

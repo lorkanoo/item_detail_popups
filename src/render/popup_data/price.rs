@@ -1,6 +1,6 @@
 use crate::configuration::popup::rendering_params::RenderingParams;
-use crate::state::cache::cache::Cache;
-use crate::state::cache::cache::StoreInCache;
+use crate::state::cache::Cache;
+use crate::state::cache::StoreInCache;
 use crate::state::context::Context;
 use nexus::imgui::Ui;
 

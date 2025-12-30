@@ -1,20 +1,21 @@
-use crate::configuration::config::{load_config_files, read_config};
-use crate::core::threads::{init_threads, unload_threads};
-use crate::state::cache::cache::Persist;
-use crate::state::context::{save_cache, write_context};
+use crate::configuration::load_config_files;
+use crate::state::context::write_context;
 use crate::state::keybinds::{register_open_search_keybind, register_show_popup_keybind};
+use crate::threads::{init_threads, unload_threads};
 use log::info;
 use nexus::gui::{register_render, RenderType};
-pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+pub const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 
 pub fn load() {
-    info!("[load] Loading item_detail_popups v{}", VERSION);
+    info!("[load] Loading {PACKAGE_NAME} v{PACKAGE_VERSION}");
     load_config_files();
     init_threads();
     register_renderers();
     register_show_popup_keybind();
     register_open_search_keybind();
-    info!("[load] item_detail_popups loaded");
+    info!("[load] {PACKAGE_NAME} loaded");
 }
 
 fn register_renderers() {
@@ -32,9 +33,7 @@ fn register_renderers() {
 }
 
 pub fn unload() {
-    info!("[unload] Unloading item_detail_popups v{VERSION}");
+    info!("[unload] Unloading {PACKAGE_NAME} v{PACKAGE_VERSION}");
     unload_threads();
-    read_config().save();
-    save_cache();
-    info!("[unload] item_detail_popups unloaded");
+    info!("[unload] {PACKAGE_NAME} unloaded");
 }

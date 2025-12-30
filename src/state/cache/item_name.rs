@@ -1,4 +1,4 @@
-use crate::configuration::config::config_dir;
+use crate::configuration::config_dir;
 use crate::state::cache::cached_data::CachedData;
 use log::info;
 use log::warn;
@@ -7,8 +7,8 @@ use std::fs::File;
 use std::io::{BufReader, BufWriter};
 use std::path::PathBuf;
 
-use crate::state::cache::cache::Persist;
-use crate::state::cache::cache::StoreInCache;
+use crate::state::cache::Persist;
+use crate::state::cache::StoreInCache;
 
 pub type ItemNamesCache = HashMap<String, Vec<u32>>;
 
@@ -43,19 +43,11 @@ impl Persist for CachedData<ItemNamesCache> {
 
     fn save(&self) {
         let path = CachedData::<ItemNamesCache>::file_path();
-        info!(
-            "[save] Attempting to save item_names_cache to \"{}\"",
-            path.display()
-        );
         match File::create(&path) {
             Ok(file) => {
                 let writer = BufWriter::new(file);
                 serde_json::to_writer_pretty(writer, self)
                     .expect("failed to serialize item_names_cache");
-                info!(
-                    "[save_item_names] Saved popup_cache to \"{}\"",
-                    path.display()
-                )
             }
             Err(err) => log::error!("Failed to save item_names_cache: {err}"),
         }

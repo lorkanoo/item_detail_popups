@@ -26,7 +26,10 @@ impl<T> CachedData<T> {
     }
 
     pub fn value(&self) -> Option<&T> {
-        if matches!(self.caching_status, CachingStatus::Cached | CachingStatus::Refreshing) {
+        if matches!(
+            self.caching_status,
+            CachingStatus::Cached | CachingStatus::Refreshing
+        ) {
             return self.value.as_ref();
         }
         None

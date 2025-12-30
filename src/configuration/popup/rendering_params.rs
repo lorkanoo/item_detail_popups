@@ -1,4 +1,4 @@
-use crate::core::utils::serde::{no, yes};
+use crate::utils::serde::{no, yes};
 use serde::{Deserialize, Serialize};
 
 const DEFAULT_MAX_CONTENT_WIDTH: f32 = 800.0;

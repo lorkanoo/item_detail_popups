@@ -1,6 +1,6 @@
-use crate::configuration::config::fonts_dir;
+use crate::configuration::fonts_dir;
 
-use crate::configuration::config::read_config;
+use crate::configuration::read_config;
 use crate::state::context::write_context;
 use crate::state::font::Font;
 use log::{debug, error, info};
@@ -75,7 +75,7 @@ pub(crate) fn preselect_fonts() {
                 read_config().selected_bold_font_name.clone(),
             ) {
                 if font_name == selected_bold_font_name {
-                    write_context().bold_font = Some(font);
+                    write_context().ui.bold_font = Some(font);
                 }
             }
         }

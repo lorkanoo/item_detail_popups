@@ -4,10 +4,10 @@ use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 
 use super::token::Token;
-use crate::configuration::config::config_dir;
+use crate::configuration::config_dir;
 
-use crate::configuration::config::read_config;
-use crate::state::cache::cache::{is_cache_expired, Persist, StoreInCache};
+use crate::configuration::read_config;
+use crate::state::cache::{is_cache_expired, Persist, StoreInCache};
 use indexmap::IndexMap;
 use log::{debug, info, trace, warn};
 use std::fs::File;
@@ -91,10 +91,6 @@ impl Persist for PopupDataCache {
             Ok(file) => {
                 let writer = BufWriter::new(file);
                 serde_json::to_writer_pretty(writer, self).expect("failed to serialize popup_data");
-                info!(
-                    "[save_popup_data_map] Saved popup data cache to \"{}\"",
-                    path.display()
-                )
             }
             Err(err) => log::error!("Failed to save popup data cache: {err}"),
         }

@@ -1,8 +1,13 @@
-use crate::configuration::config::read_config;
-use crate::core::utils::ui::{UiAction, UiExtended};
+use crate::configuration::read_config;
+use crate::render::ui::{UiAction, UiExtended};
 use crate::state::context::Context;
 use log::debug;
 use nexus::imgui::Ui;
+
+const CLOSE_POPUP_TOLERANCE_LEFT: f32 = 25.0;
+const CLOSE_POPUP_TOLERANCE_RIGHT: f32 = 15.0;
+const CLOSE_POPUP_TOLERANCE_TOP: f32 = 20.0;
+const CLOSE_POPUP_TOLERANCE_BOTTOM: f32 = 15.0;
 
 impl Context {
     pub fn render_hovered_popup(&mut self, ui: &Ui) {
@@ -21,7 +26,7 @@ impl Context {
                         popup,
                         &mut ui_actions,
                         &mut self.cache,
-                        &self.bold_font,
+                        &self.ui.bold_font,
                     );
                 });
                 if read_config().close_on_mouse_away {
@@ -52,12 +57,12 @@ impl Context {
 
     fn close_popup_on_mouse_away(ui: &Ui, ui_actions: &mut Vec<UiAction>) {
         let mut hover_bounds_min = ui.window_pos();
-        hover_bounds_min[0] -= 25.0;
-        hover_bounds_min[1] -= 20.0;
+        hover_bounds_min[0] -= CLOSE_POPUP_TOLERANCE_LEFT;
+        hover_bounds_min[1] -= CLOSE_POPUP_TOLERANCE_TOP;
         let mut hover_bounds_max = ui.window_pos();
         let size = ui.window_size();
-        hover_bounds_max[0] += size[0] + 15.0;
-        hover_bounds_max[1] += size[1] + 15.0;
+        hover_bounds_max[0] += size[0] + CLOSE_POPUP_TOLERANCE_RIGHT;
+        hover_bounds_max[1] += size[1] + CLOSE_POPUP_TOLERANCE_BOTTOM;
         if !ui.mouse_in_bounds(hover_bounds_min, hover_bounds_max) {
             ui.close_current_popup();
             ui_actions.push(UiAction::Close);

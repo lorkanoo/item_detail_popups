@@ -1,9 +1,9 @@
 use crate::api::gw2_wiki::prepare_item_popup_with_quantity;
-use crate::core::threads::lock_threads;
-use crate::core::utils::item_tag_parser::extract_item_details;
-use crate::core::utils::key_combination::{trigger_key_combination, KeyCombination};
+use crate::service::item_tag_parser::extract_item_details;
+use crate::service::keyboard::{trigger_key_combination, KeyCombination};
 use crate::state::context::{read_context, write_context};
 use crate::state::mumble::textbox_has_focus;
+use crate::threads::lock_threads;
 use log::{debug, error};
 use nexus::keybind::register_keybind_with_string;
 use nexus::keybind_handler;
@@ -69,7 +69,7 @@ pub fn register_open_search_keybind() {
     let keybind_handler = keybind_handler!(|_id, is_release| {
         debug!("[register_open_search_keybind]");
         if is_release {
-            write_context().should_open_search = true;
+            write_context().ui.should_open_search_prompt = true;
         }
     });
     register_keybind_with_string("Open search", keybind_handler, "CTRL+SHIFT+F").revert_on_unload();

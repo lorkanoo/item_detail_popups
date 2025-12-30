@@ -1,20 +1,20 @@
-use crate::api::gw2_wiki::prepare_item_popup;
-use crate::core::threads::lock_threads;
-use crate::state::context::{read_context, write_context, Context};
+use crate::state::context::Context;
 use log::debug;
 use nexus::imgui::Ui;
-use std::thread;
+use crate::addon::PACKAGE_NAME;
 
 mod hovered_popup;
 mod options;
 mod pinned_popup;
 pub mod popup_data;
-pub mod token_renderer;
+pub mod token;
+pub mod ui;
+mod search;
 
 impl Context {
     pub fn render(&mut self, ui: &Ui) {
         debug!("[render]");
-
+        let _ = ui.push_id(PACKAGE_NAME);
         if !self.run_background_thread {
             return;
         }
@@ -26,7 +26,8 @@ impl Context {
         debug!("[render_popups]");
         self.render_hovered_popup(ui);
         self.render_pinned_popups(ui);
-        self.render_search(ui);
+        self.render_search_prompt(ui);
+        self.render_search_result(ui);
     }
 
     fn render_progress_indicator(&mut self, ui: &Ui<'_>) {
@@ -36,33 +37,5 @@ impl Context {
                 ui.text(format!("Loading ({}%)", progress));
             });
         }
-    }
-
-    fn render_search(&mut self, ui: &Ui) {
-        let mut should_focus_input = false;
-        if self.should_open_search {
-            ui.open_popup("##Search_popup_idp");
-            self.should_open_search = false;
-            self.search_popup_input = "".to_string();
-            should_focus_input = true;
-        }
-        ui.popup("##Search_popup_idp", || {
-            if should_focus_input {
-                ui.set_keyboard_focus_here();
-            }
-            ui.input_text("##search_input_idp", &mut self.search_popup_input)
-                .build();
-            ui.text_disabled("Press enter to search");
-            if ui.is_key_released(nexus::imgui::Key::Enter) {
-                ui.close_current_popup();
-                lock_threads().push(thread::spawn(move || {
-                    write_context().ui.loading_progress = Some(1);
-                    let item_name = read_context().search_popup_input.clone();
-                    write_context().search_popup_input = "".to_string();
-                    write_context().ui.hovered_popup = Some(prepare_item_popup(item_name.as_str()));
-                    write_context().ui.loading_progress = None;
-                }));
-            }
-        });
     }
 }

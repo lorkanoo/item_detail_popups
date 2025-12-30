@@ -3,7 +3,7 @@ use std::ffi::CStr;
 use std::ptr::NonNull;
 use std::slice;
 
-#[derive(Clone, PartialEq, Copy)]
+#[derive(Clone, PartialEq, Copy, Debug)]
 #[repr(transparent)]
 pub struct Font(pub NonNull<ImFont>);
 pub struct FontToken;

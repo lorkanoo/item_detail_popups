@@ -1,5 +1,5 @@
-use crate::core::utils::ui::{UiAction, CLOSE_BUTTON_MARGIN_OUTER_X, CLOSE_BUTTON_SIZE};
-use crate::state::cache::cache::Cache;
+use crate::render::ui::{UiAction, CLOSE_BUTTON_MARGIN_OUTER_X, CLOSE_BUTTON_SIZE};
+use crate::state::cache::Cache;
 use crate::state::context::Context;
 use crate::state::font::Font;
 use crate::state::popup::{dimensions::Dimensions, popup_state::PopupState, Popup};
@@ -10,14 +10,14 @@ use nexus::imgui::{Condition, Ui, Window};
 impl Context {
     pub fn render_pinned_popups(&mut self, ui: &Ui) {
         let mut ui_actions = vec![];
-        for (i, popup) in self.ui.pinned_popups.iter_mut().enumerate() {
+        for (pinned_popup_index, popup) in self.ui.pinned_popups.iter_mut().enumerate() {
             Self::render_pinned_popup(
                 ui,
                 &mut ui_actions,
-                i,
+                pinned_popup_index,
                 popup,
                 &mut self.cache,
-                &self.bold_font,
+                &self.ui.bold_font,
             );
         }
         self.process_pinned_popups_actions(ui_actions);
@@ -33,7 +33,7 @@ impl Context {
     fn render_pinned_popup(
         ui: &Ui<'_>,
         ui_actions: &mut Vec<UiAction>,
-        popup_vec_index: usize,
+        pinned_popup_index: usize,
         popup: &mut Popup,
         cache: &mut Cache,
         bold_font: &Option<Font>,
@@ -63,7 +63,7 @@ impl Context {
             .build(ui, || {
                 Self::render_popup_data(
                     ui,
-                    Some(popup_vec_index),
+                    Some(pinned_popup_index),
                     popup,
                     ui_actions,
                     cache,
@@ -71,7 +71,7 @@ impl Context {
                 );
             });
         if !popup.state.opened {
-            ui_actions.push(UiAction::Delete(popup_vec_index));
+            ui_actions.push(UiAction::Delete(pinned_popup_index));
         }
     }
 

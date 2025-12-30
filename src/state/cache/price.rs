@@ -1,16 +1,17 @@
-use crate::api::gw2::price::{get_prices, PriceApiResponse};
-use crate::configuration::config::read_config;
-use crate::state::cache::cache::{is_cache_expired, StoreInCache};
+use crate::api::gw2::price::get_prices;
+use crate::configuration::read_config;
 use crate::state::cache::cached_data::CachedData;
 use crate::state::cache::caching_status::CachingStatus;
+use crate::state::cache::caching_status::CachingStatus::{Cached, Failed};
+use crate::state::cache::{is_cache_expired, StoreInCache};
+use crate::state::context::write_context;
+use crate::threads::lock_threads;
 use chrono::Local;
+use log::debug;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::thread;
-use log::debug;
-use crate::core::threads::lock_threads;
-use crate::state::cache::caching_status::CachingStatus::{Cached, Failed};
-use crate::state::context::write_context;
+use crate::api::gw2::price::price_api_response::PriceApiResponse;
 
 #[derive(Clone, Serialize, Deserialize, Debug, Default)]
 pub struct Price {
@@ -52,10 +53,7 @@ impl<'a> StoreInCache<'a, PriceCache, PriceCache, Vec<u32>> for PriceCache {
 
 pub fn cache_prices_thread(item_ids: Vec<u32>) {
     lock_threads().push(thread::spawn(move || {
-        debug!(
-            "[cache_prices_thread] started for {} items",
-            item_ids.len()
-        );
+        debug!("[cache_prices_thread] started for {} items", item_ids.len());
 
         match get_prices(&item_ids) {
             Ok(prices) => cache_prices(&item_ids, prices),

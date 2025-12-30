@@ -1,5 +1,5 @@
-use crate::configuration::config::read_config;
-use crate::state::cache::cache::is_cache_expired;
+use crate::configuration::read_config;
+use crate::state::cache::is_cache_expired;
 use crate::state::context::write_context;
 
 pub(crate) fn clean_expired_cache() {

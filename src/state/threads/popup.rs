@@ -1,8 +1,8 @@
 use crate::api::gw2_wiki::prepare_item_popup_with_quantity;
 
-use crate::core::threads::lock_threads;
 use crate::state::context::write_context;
 use crate::state::popup::popup_state::PopupState;
+use crate::threads::lock_threads;
 use std::thread;
 
 pub fn refresh_popup_thread(popup_state: PopupState, popup_title: String) {

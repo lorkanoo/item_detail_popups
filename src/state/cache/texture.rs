@@ -1,12 +1,12 @@
 use crate::api::gw2_wiki::download_wiki_image;
-use crate::configuration::config::read_config;
-use crate::configuration::config::textures_dir;
-use crate::core::threads::lock_threads;
-use crate::state::cache::cache::is_cache_expired;
-use crate::state::cache::cache::StoreInCache;
+use crate::configuration::read_config;
+use crate::configuration::textures_dir;
 use crate::state::cache::cached_data::CachedData;
 use crate::state::cache::caching_status::CachingStatus;
+use crate::state::cache::is_cache_expired;
+use crate::state::cache::StoreInCache;
 use crate::state::context::write_context;
+use crate::threads::lock_threads;
 use chrono::Local;
 use log::{debug, error};
 use nexus::texture::{load_texture_from_file, RawTextureReceiveCallback, Texture};
@@ -28,10 +28,7 @@ impl<'a> StoreInCache<'a, TextureCache, CachedData<Texture>, String> for Texture
                 let cache_expiration_duration = read_config().max_texture_expiration_duration;
                 let mut result = texture_cached_data.clone();
                 if is_cache_expired(cache_expiration_duration, texture_cached_data.date)
-                    && !matches!(
-                        &texture_cached_data.caching_status,
-                        CachingStatus::Caching
-                    )
+                    && !matches!(&texture_cached_data.caching_status, CachingStatus::Caching)
                 {
                     result = CachedData::new(Local::now());
                     self.insert(texture_id_with_prefix, result.clone());

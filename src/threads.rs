@@ -1,11 +1,11 @@
-use crate::state::threads::daemon::{daemon_thread, gc_thread, preloader_thread};
+use crate::state::threads::daemon::{daemon_thread, preloader_thread};
 
+use crate::state::cache::gw2_tp::cache_item_names_thread;
 use crate::state::context::write_context;
 use log::{error, info, trace};
 use std::sync::{Mutex, MutexGuard, OnceLock};
 use std::thread;
 use std::thread::JoinHandle;
-use crate::state::cache::gw2_tp::cache_item_names_thread;
 
 pub(crate) static THREADS: OnceLock<Mutex<Vec<JoinHandle<()>>>> = OnceLock::new();
 
@@ -40,6 +40,5 @@ pub fn unload_threads() {
 pub fn init_threads() {
     cache_item_names_thread();
     daemon_thread();
-    gc_thread();
     preloader_thread();
 }

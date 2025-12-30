@@ -1,12 +1,12 @@
-use crate::state::cache::cache::Cache;
-use crate::state::cache::cache::Persist;
+use crate::state::cache::Cache;
+use crate::state::cache::Persist;
 use crate::state::clipboard::CustomClipboard;
-use crate::state::font::Font;
 use crate::state::links::Links;
 use crate::state::ui_context::UiContext;
 use log::trace;
 use std::sync::{OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::thread;
+use chrono::{DateTime, Local};
 
 pub(crate) static CONTEXT: OnceLock<RwLock<Context>> = OnceLock::new();
 
@@ -18,11 +18,9 @@ pub struct Context {
     pub clipboard: CustomClipboard,
     pub last_clipboard_text: Option<String>,
     pub cache: Cache,
-    pub search_popup_input: String,
-    pub should_open_search: bool,
-    pub search_opened: bool,
-    pub bold_font: Option<Font>,
-    pub tab_to_blacklist_input: String,
+    pub last_config_save_date: DateTime<Local>,
+    pub last_cache_save_date: DateTime<Local>,
+    pub last_gc_date: DateTime<Local>
 }
 
 impl Default for Context {
@@ -34,11 +32,9 @@ impl Default for Context {
             clipboard: CustomClipboard::default(),
             last_clipboard_text: None,
             cache: Cache::default(),
-            search_popup_input: "".to_string(),
-            should_open_search: false,
-            search_opened: false,
-            bold_font: None,
-            tab_to_blacklist_input: "".to_string(),
+            last_config_save_date: Local::now(),
+            last_cache_save_date: Local::now(),
+            last_gc_date: Local::now()
         }
     }
 }
@@ -75,7 +71,7 @@ pub fn read_context() -> RwLockReadGuard<'static, Context> {
     result
 }
 
-pub(crate) fn save_cache() {
+pub fn save_cache() {
     read_context().cache.item_names.save();
     read_context().cache.popup_data_map.save();
 }

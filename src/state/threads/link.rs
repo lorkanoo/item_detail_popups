@@ -1,7 +1,7 @@
 use crate::api::gw2_wiki::prepare_href_popup;
 
-use crate::core::threads::lock_threads;
 use crate::state::context::write_context;
+use crate::threads::lock_threads;
 use log::debug;
 use std::thread;
 

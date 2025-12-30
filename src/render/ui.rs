@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use nexus::imgui::sys::{self, igGetMousePos};
+use nexus::imgui::sys::{self, ImVec2};
 use nexus::imgui::{
     ColorEdit, ColorPreview, ComboBoxFlags, MouseButton, Selectable, SelectableFlags, StyleColor,
     Ui,
@@ -39,16 +39,16 @@ pub trait UiExtended {
     fn text_or_disabled(&self, text: impl AsRef<str>, should_render_disabled: &bool);
     fn close_button(&self, text: impl AsRef<str>, x_pos_limit: &f32) -> bool;
     fn not_in_view(&self, height: &f32) -> bool;
+    fn set_next_window_pos(&self, pos: [f32; 2]);
 }
 
 impl UiExtended for Ui<'_> {
     fn mouse_in_bounds(&self, bounds_min: [f32; 2], bounds_max: [f32; 2]) -> bool {
-        let mut mouse_pos = sys::ImVec2::zero();
-        unsafe { igGetMousePos(&mut mouse_pos) };
-        bounds_min[0] < mouse_pos.x
-            && bounds_min[1] < mouse_pos.y
-            && mouse_pos.x < bounds_max[0]
-            && mouse_pos.y < bounds_max[1]
+        let mouse_pos = self.io().mouse_pos;
+        bounds_min[0] < mouse_pos[0]
+            && bounds_min[1] < mouse_pos[1]
+            && mouse_pos[0] < bounds_max[0]
+            && mouse_pos[1] < bounds_max[1]
     }
 
     fn input_color_alpha(&self, ui: &Ui, label: impl AsRef<str>, color: &mut [f32; 4]) -> bool {
@@ -192,5 +192,9 @@ impl UiExtended for Ui<'_> {
         let cursor_pos_y = self.cursor_pos()[1];
         cursor_pos_y < self.scroll_y() - height * 2.0
             || cursor_pos_y > self.scroll_y() + self.window_size()[1] + height
+    }
+
+    fn set_next_window_pos(&self, pos: [f32; 2]) {
+        unsafe { sys::igSetNextWindowPos(ImVec2::new(pos[0], pos[1]), 0.into(), ImVec2::zero()) }
     }
 }
