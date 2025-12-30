@@ -195,6 +195,6 @@ impl UiExtended for Ui<'_> {
     }
 
     fn set_next_window_pos(&self, pos: [f32; 2]) {
-        unsafe { sys::igSetNextWindowPos(ImVec2::new(pos[0], pos[1]), 0.into(), ImVec2::zero()) }
+        unsafe { sys::igSetNextWindowPos(ImVec2::new(pos[0], pos[1]), 0, ImVec2::zero()) }
     }
 }

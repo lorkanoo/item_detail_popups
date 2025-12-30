@@ -16,7 +16,7 @@ impl Context {
         let mut should_focus_input = false;
         if self.ui.should_open_search_prompt {
             let mut search_position = ui.io().mouse_pos;
-            search_position[0] = search_position[0] + SEARCH_POS_OFFSET_X;
+            search_position[0] += SEARCH_POS_OFFSET_X;
             self.ui.search_position = search_position;
             ui.set_next_window_pos(search_position);
             ui.open_popup("##Search_prompt_idp");

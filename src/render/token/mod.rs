@@ -14,7 +14,7 @@ use log::debug;
 use nexus::imgui::Ui;
 use nexus::imgui::StyleVar::ItemSpacing;
 
-const INDENT: &'static str = "    ";
+const INDENT: &str = "    ";
 
 impl Context {
     pub fn render_tokens(

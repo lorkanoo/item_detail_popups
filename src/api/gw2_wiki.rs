@@ -205,7 +205,7 @@ pub fn extract_search_results(document: &Html, item_id: Option<u32>) -> Vec<Matc
         let selector = format!(r#"td[data-sort-value="{}"]"#, item_id);
         let item_selector = Selector::parse(selector.as_str()).unwrap();
         let mut item_iterator = document.select(&item_selector);
-        while let Some(tag_element) = item_iterator.next() {
+        for tag_element in item_iterator {
             if let Some(element) = tag_element.parent().and_then(ElementRef::wrap) {
                 let link_selector = Selector::parse("a").unwrap();
                 if let Some(link_element) = element.select(&link_selector).next() {
@@ -219,7 +219,7 @@ pub fn extract_search_results(document: &Html, item_id: Option<u32>) -> Vec<Matc
         let selector = r#".mw-search-result-heading > a"#.to_string();
         let item_selector = Selector::parse(selector.as_str()).unwrap();
         let mut item_iterator = document.select(&item_selector);
-        while let Some(link_element) = item_iterator.next() {
+        for link_element in item_iterator {
             let text = extract_title(link_element);
             let href = extract_href(link_element);
             matching_search_entries.push(MatchingSearchEntry::new(text, href));

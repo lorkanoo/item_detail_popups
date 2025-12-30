@@ -12,7 +12,7 @@ mod sell_price;
 pub fn get_prices(item_ids: &Vec<u32>) -> Result<Vec<PriceApiResponse>, ApiError> {
     debug!("[get_prices] started for {} items", item_ids.len());
 
-    get_sync(prices_path(&item_ids))
+    get_sync(prices_path(item_ids))
         .map_err(|e| ApiError::Unexpected(format!("Failed to fetch prices: {}", e)))
         .and_then(|response| {
             response

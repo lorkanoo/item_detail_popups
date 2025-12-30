@@ -42,16 +42,16 @@ pub fn close_all_popups() {
 }
 
 pub fn fill_popup_with_wiki_details(popup: &mut Popup, document: &Html) {
-    fill_item_icon(&document, popup);
-    fill_tags(&document, popup);
-    fill_description(&document, popup);
+    fill_item_icon(document, popup);
+    fill_tags(document, popup);
+    fill_description(document, popup);
     let section_selector = Selector::parse("h2").unwrap();
     let sections = document.select(&section_selector);
     for section in sections {
         fill_data(section, &mut popup.data.sections);
     }
-    fill_notes(&document, popup);
-    fill_images(&document, popup);
+    fill_notes(document, popup);
+    fill_images(document, popup);
 }
 
 fn fill_item_icon(document: &Html, popup: &mut Popup) {
